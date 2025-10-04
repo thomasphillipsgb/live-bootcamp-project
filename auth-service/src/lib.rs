@@ -28,5 +28,6 @@ impl Application {
 }
 
 async fn hello_handler() -> Html<&'static str> {
+    println!("hello handler called");
     Html("<h1>Hello, Rustaceans!</h1>")
 }
