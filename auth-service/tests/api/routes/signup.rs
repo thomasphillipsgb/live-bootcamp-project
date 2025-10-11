@@ -1,3 +1,5 @@
+use auth_service::ErrorResponse;
+
 use crate::helpers::{get_random_email, TestApp};
 
 #[tokio::test]
@@ -53,4 +55,37 @@ async fn should_return_409_for_duplicate_signup() {
 
     let response2 = app.post_signup(&body).await;
     assert_eq!(response2.status().as_u16(), 409);
+    assert_eq!(
+        response2
+            .json::<ErrorResponse>()
+            .await
+            .expect("Could not deserialize response body to ErrorResponse")
+            .error,
+        "User already exists".to_owned()
+    );
+}
+
+#[tokio::test]
+async fn should_return_400_if_invalid_input() {
+    let app = TestApp::new().await;
+
+    let test_cases = [
+        serde_json::json!({ "email": "not-a-valid-email", "password": "anotherPassword!", "requires2FA": false }),
+        serde_json::json!({ "email": "", "password": "anotherPassword!", "requires2FA": false }),
+        serde_json::json!({ "email": "<script>alert('xss')</script>", "password": "anotherPassword!", "requires2FA": false })
+    ];
+
+    for i in test_cases {
+        let response = app.post_signup(&i).await;
+        assert_eq!(response.status().as_u16(), 400, "Failed for input: {:?}", i);
+
+        assert_eq!(
+            response
+                .json::<ErrorResponse>()
+                .await
+                .expect("Could not deserialize response body to ErrorResponse")
+                .error,
+            "Invalid credentials".to_owned()
+        );
+    }
 }

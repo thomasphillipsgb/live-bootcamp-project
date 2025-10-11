@@ -5,14 +5,12 @@ pub mod services;
 use std::error::Error;
 
 use axum::{
-    response::Html,
-    routing::{get, post},
-    serve::Serve,
-    Router,
+    http, response::{Html, IntoResponse, Response}, routing::{get, post}, serve::Serve, Json, Router
 };
+use serde::{Deserialize, Serialize};
 use tower_http::services::ServeDir;
 
-use crate::{app_state::AppState, routes::{
+use crate::{app_state::AppState, domain::AuthAPIError, routes::{
     login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
 }};
 
@@ -49,6 +47,27 @@ impl Application {
 async fn hello_handler() -> Html<&'static str> {
     println!("hello handler called");
     Html("<h1>Hello, Rustaceans!</h1>")
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ErrorResponse {
+    pub error: String,
+}
+
+impl IntoResponse for AuthAPIError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            AuthAPIError::UserAlreadyExists => (http::StatusCode::CONFLICT, "User already exists"),
+            AuthAPIError::InvalidCredentials => (http::StatusCode::BAD_REQUEST, "Invalid credentials"),
+            AuthAPIError::UnexpectedError => {
+                (http::StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
+            }
+        };
+        let body = Json(ErrorResponse {
+            error: error_message.to_string()
+        });
+        (status, body).into_response()
+    }
 }
 
 pub mod app_state {
