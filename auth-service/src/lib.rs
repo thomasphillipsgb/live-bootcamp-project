@@ -1,4 +1,6 @@
+mod domain;
 pub mod routes;
+pub mod services;
 
 use std::error::Error;
 
@@ -10,9 +12,9 @@ use axum::{
 };
 use tower_http::services::ServeDir;
 
-use crate::routes::{
+use crate::{app_state::AppState, routes::{
     login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
-};
+}};
 
 pub struct Application {
     server: Serve<tokio::net::TcpListener, Router, Router>,
@@ -20,7 +22,7 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(address: &str) -> Result<Self, Box<dyn Error>> {
+    pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
         let router = Router::new()
             .fallback_service(ServeDir::new("assets"))
             .route("/hello", get(hello_handler))
@@ -28,7 +30,8 @@ impl Application {
             .route("/login", post(login_handler))
             .route("/logout", post(logout_handler))
             .route("/verify-2fa", post(verify_2fa_handler))
-            .route("/verify-token", post(verify_token_handler));
+            .route("/verify-token", post(verify_token_handler))
+            .with_state(app_state);
 
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
@@ -46,4 +49,25 @@ impl Application {
 async fn hello_handler() -> Html<&'static str> {
     println!("hello handler called");
     Html("<h1>Hello, Rustaceans!</h1>")
+}
+
+pub mod app_state {
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    use crate::services::hashmap_user_store::HashMapUserStore;
+
+    // Using a type alias to improve readability!
+    pub type UserStoreType = Arc<RwLock<HashMapUserStore>>;
+
+    #[derive(Clone)]
+    pub struct AppState {
+        pub user_store: UserStoreType,
+    }
+
+    impl AppState {
+        pub fn new(user_store: UserStoreType) -> Self {
+            Self { user_store }
+        }
+    }
 }
