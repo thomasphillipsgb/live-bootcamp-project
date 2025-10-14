@@ -1,3 +1,5 @@
+use std::f32::consts::E;
+
 use axum::{
     extract::State,
     http::{self},
@@ -8,7 +10,7 @@ use serde::Serialize;
 
 use crate::{
     app_state::AppState,
-    domain::{AuthAPIError, User},
+    domain::{models::{Email, Password}, AuthAPIError, User},
     services::{Storage, UserStore, UserStoreError},
 };
 
@@ -22,19 +24,16 @@ where
     let email = request.email;
     let password = request.password;
 
-    if email.trim().is_empty()
-        || password.trim().is_empty()
-        || password.len() < 8
-        || !email.contains('@')
-    {
-        return Err(AuthAPIError::InvalidCredentials);
-    }
+    let (email, password) = match (Email::new(email), Password::new(password)) {
+        (Ok(email), Ok(password)) => (email, password),
+        _ => return Err(AuthAPIError::InvalidCredentials),
+    };
 
     let user = User::new(email, password, request.requires_2fa);
 
     let mut user_store = app_state.user_store.write().await;
 
-    match user_store.insert(user.email.clone(), user) {
+    match user_store.insert(user) {
         Ok(_) => {
             let response = Json(SignupResponse {
                 message: "User created successfully!".to_string(),

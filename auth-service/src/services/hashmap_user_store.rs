@@ -1,25 +1,25 @@
 use std::{collections::HashMap};
 
-use crate::{domain::User, services::{Storage, UserStore, UserStoreError}};
+use crate::{domain::{models::Email, User}, services::{Storage, UserStore, UserStoreError}};
 
 #[derive(Clone)]
 pub struct HashMapUserStore {
-    users: HashMap<String, User>,
+    users: HashMap<Email, User>,
 }
 
 impl UserStore for HashMapUserStore {}
 
-impl Storage<User, UserStoreError> for HashMapUserStore {
-    fn insert(&mut self, key: String, user: User) -> Result<(), UserStoreError> {
+impl Storage<Email, User, UserStoreError> for HashMapUserStore {
+    fn insert(&mut self, user: User) -> Result<(), UserStoreError> {
         if self.users.contains_key(&user.email) {
             return Err(UserStoreError::UserAlreadyExists);
         }
 
-        self.users.insert(key, user);
+        self.users.insert(user.email.clone(), user);
         Ok(())
     }
 
-    fn get(&self, key: &str) -> Result<User, UserStoreError> {
+    fn get(&self, key: &Email) -> Result<User, UserStoreError> {
         if self.users.contains_key(key) {
             Ok(self.users.get(key).unwrap().clone())
         } else {
@@ -27,9 +27,9 @@ impl Storage<User, UserStoreError> for HashMapUserStore {
         }
     }
 
-    fn validate(&self, key: &str, password: &str) -> Result<(), UserStoreError> {
+    fn validate(&self, key: &Email, password: &str) -> Result<(), UserStoreError> {
         if let Some(user) = self.users.get(key) {
-            if user.password == password {
+            if user.password.as_ref() == password {
                 Ok(())
             } else {
                 Err(UserStoreError::InvalidCredentials)
@@ -46,41 +46,35 @@ impl HashMapUserStore {
             users: HashMap::new(),
         }
     }
-
-    pub fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
-        self.insert(user.email.clone(), user)
-    }
-
-    pub fn get_user(&self, email: &str) -> Result<User, UserStoreError> {
-        self.get(email)
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::domain::models::Password;
+
     use super::*;
 
     #[test]
     fn test_add_user() {
         let mut store = HashMapUserStore::new();
-        let user = User::new("test@example.com".into(), "password".into(), false);
-        assert!(store.add_user(user).is_ok());
+        let user = User::new(Email::new("test@example.com".into()).unwrap(), Password::new("password".into()).unwrap(), false);
+        assert!(store.insert(user).is_ok());
     }
 
     #[test]
     fn test_get_user() {
         let mut store = HashMapUserStore::new();
-        let user = User::new("test@example.com".into(), "password".into(), false);
-        store.add_user(user).unwrap();
-        assert!(store.get_user("test@example.com").is_ok());
+        let user = User::new(Email::new("test@example.com".into()).unwrap(), Password::new("password".into()).unwrap(), false);
+        store.insert(user).unwrap();
+        assert!(store.get(&Email::new("test@example.com".into()).unwrap()).is_ok());
     }
 
     #[test]
     fn test_validate_user() {
         let mut store = HashMapUserStore::new();
-        let user = User::new("test@example.com".into(), "password".into(), false);
-        store.add_user(user).unwrap();
-        assert!(store.validate("test@example.com", "password").is_ok());
-        assert!(store.validate("test@example.com", "wrong_password").is_err());
+        let user = User::new(Email::new("test@example.com".into()).unwrap(), Password::new("password".into()).unwrap(), false);
+        store.insert(user).unwrap();
+        assert!(store.validate(&Email::new("test@example.com".into()).unwrap(), "password").is_ok());
+        assert!(store.validate(&Email::new("test@example.com".into()).unwrap(), "wrong_password").is_err());
     }
 }

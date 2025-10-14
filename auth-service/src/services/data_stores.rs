@@ -1,6 +1,6 @@
-use crate::{domain::User, services::Storage};
+use crate::{domain::{models::Email, User}, services::Storage};
 
-pub trait UserStore: Storage<User, UserStoreError> {}
+pub trait UserStore: Storage<Email, User, UserStoreError> {}
 
 #[derive(Debug, PartialEq)]
 pub enum UserStoreError {
