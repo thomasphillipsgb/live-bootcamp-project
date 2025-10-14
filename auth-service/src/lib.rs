@@ -5,14 +5,23 @@ pub mod services;
 use std::error::Error;
 
 use axum::{
-    http, response::{Html, IntoResponse, Response}, routing::{get, post}, serve::Serve, Json, Router
+    http,
+    response::{Html, IntoResponse, Response},
+    routing::{get, post},
+    serve::Serve,
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use tower_http::services::ServeDir;
 
-use crate::{app_state::AppState, domain::AuthAPIError, routes::{
-    login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
-}};
+use crate::{
+    app_state::AppState,
+    domain::AuthAPIError,
+    routes::{
+        login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
+    },
+    services::{HashMapUserStore, UserStore},
+};
 
 pub struct Application {
     server: Serve<tokio::net::TcpListener, Router, Router>,
@@ -20,7 +29,10 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
+    pub async fn build<T>(app_state: AppState<T>, address: &str) -> Result<Self, Box<dyn Error>>
+    where
+        T: UserStore + Clone + Send + Sync + 'static,
+    {
         let router = Router::new()
             .fallback_service(ServeDir::new("assets"))
             .route("/hello", get(hello_handler))
@@ -58,13 +70,15 @@ impl IntoResponse for AuthAPIError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
             AuthAPIError::UserAlreadyExists => (http::StatusCode::CONFLICT, "User already exists"),
-            AuthAPIError::InvalidCredentials => (http::StatusCode::BAD_REQUEST, "Invalid credentials"),
+            AuthAPIError::InvalidCredentials => {
+                (http::StatusCode::BAD_REQUEST, "Invalid credentials")
+            }
             AuthAPIError::UnexpectedError => {
                 (http::StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
             }
         };
         let body = Json(ErrorResponse {
-            error: error_message.to_string()
+            error: error_message.to_string(),
         });
         (status, body).into_response()
     }
@@ -74,18 +88,27 @@ pub mod app_state {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    use crate::services::hashmap_user_store::HashMapUserStore;
+    use crate::services::{HashMapUserStore, UserStore};
 
     // Using a type alias to improve readability!
-    pub type UserStoreType = Arc<RwLock<HashMapUserStore>>;
+    pub type UserStoreType<T>
+    where
+        T: UserStore,
+    = Arc<RwLock<T>>;
 
     #[derive(Clone)]
-    pub struct AppState {
-        pub user_store: UserStoreType,
+    pub struct AppState<T>
+    where
+        T: UserStore,
+    {
+        pub user_store: UserStoreType<T>,
     }
 
-    impl AppState {
-        pub fn new(user_store: UserStoreType) -> Self {
+    impl<T> AppState<T>
+    where
+        T: UserStore,
+    {
+        pub fn new(user_store: UserStoreType<T>) -> Self {
             Self { user_store }
         }
     }
