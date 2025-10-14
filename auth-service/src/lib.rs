@@ -20,7 +20,7 @@ use crate::{
     routes::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
-    services::{HashMapUserStore, UserStore},
+    services::UserStore,
 };
 
 pub struct Application {
@@ -88,13 +88,10 @@ pub mod app_state {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    use crate::services::{HashMapUserStore, UserStore};
+    use crate::services::UserStore;
 
     // Using a type alias to improve readability!
-    pub type UserStoreType<T>
-    where
-        T: UserStore,
-    = Arc<RwLock<T>>;
+    pub type UserStoreType<T> = Arc<RwLock<T>>;
 
     #[derive(Clone)]
     pub struct AppState<T>

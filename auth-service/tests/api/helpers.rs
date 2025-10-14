@@ -20,6 +20,7 @@ impl TestApp {
             .expect("Failed to build application");
         let address = format!("http://{}", app.address);
 
+        #[allow(clippy::let_underscore_future)]
         let _ = tokio::spawn(app.run());
 
         let http_client = reqwest::Client::new();
@@ -43,7 +44,7 @@ impl TestApp {
         Body: serde::Serialize,
     {
         self.http_client
-            .post(&format!("{}/signup", &self.address))
+            .post(format!("{}/signup", &self.address))
             .json(body)
             .send()
             .await
@@ -52,7 +53,7 @@ impl TestApp {
 
     pub async fn post_login(&self) -> reqwest::Response {
         self.http_client
-            .post(&format!("{}/login", &self.address))
+            .post(format!("{}/login", &self.address))
             .send()
             .await
             .expect("Failed to execute request.")
@@ -60,7 +61,7 @@ impl TestApp {
 
     pub async fn post_logout(&self) -> reqwest::Response {
         self.http_client
-            .post(&format!("{}/logout", &self.address))
+            .post(format!("{}/logout", &self.address))
             .send()
             .await
             .expect("Failed to execute request.")
@@ -68,7 +69,7 @@ impl TestApp {
 
     pub async fn post_verify_2fa(&self) -> reqwest::Response {
         self.http_client
-            .post(&format!("{}/verify-2fa", &self.address))
+            .post(format!("{}/verify-2fa", &self.address))
             .send()
             .await
             .expect("Failed to execute request.")
@@ -76,7 +77,7 @@ impl TestApp {
 
     pub async fn post_verify_token(&self) -> reqwest::Response {
         self.http_client
-            .post(&format!("{}/verify-token", &self.address))
+            .post(format!("{}/verify-token", &self.address))
             .send()
             .await
             .expect("Failed to execute request.")
@@ -84,5 +85,5 @@ impl TestApp {
 }
 
 pub fn get_random_email() -> String {
-    format!("{}@example.com", Uuid::new_v4().to_string())
+    format!("{}@example.com", Uuid::new_v4())
 }

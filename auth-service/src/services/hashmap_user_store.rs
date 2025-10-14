@@ -1,6 +1,9 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
-use crate::{domain::{models::Email, User}, services::{Storage, UserStore, UserStoreError}};
+use crate::{
+    domain::{models::Email, User},
+    services::{Storage, UserStore, UserStoreError},
+};
 
 #[derive(Clone)]
 pub struct HashMapUserStore {
@@ -40,6 +43,12 @@ impl Storage<Email, User, UserStoreError> for HashMapUserStore {
     }
 }
 
+impl Default for HashMapUserStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HashMapUserStore {
     pub fn new() -> Self {
         Self {
@@ -57,24 +66,45 @@ mod tests {
     #[test]
     fn test_add_user() {
         let mut store = HashMapUserStore::new();
-        let user = User::new(Email::new("test@example.com".into()).unwrap(), Password::new("password".into()).unwrap(), false);
+        let user = User::new(
+            Email::new("test@example.com".into()).unwrap(),
+            Password::new("password".into()).unwrap(),
+            false,
+        );
         assert!(store.insert(user).is_ok());
     }
 
     #[test]
     fn test_get_user() {
         let mut store = HashMapUserStore::new();
-        let user = User::new(Email::new("test@example.com".into()).unwrap(), Password::new("password".into()).unwrap(), false);
+        let user = User::new(
+            Email::new("test@example.com".into()).unwrap(),
+            Password::new("password".into()).unwrap(),
+            false,
+        );
         store.insert(user).unwrap();
-        assert!(store.get(&Email::new("test@example.com".into()).unwrap()).is_ok());
+        assert!(store
+            .get(&Email::new("test@example.com".into()).unwrap())
+            .is_ok());
     }
 
     #[test]
     fn test_validate_user() {
         let mut store = HashMapUserStore::new();
-        let user = User::new(Email::new("test@example.com".into()).unwrap(), Password::new("password".into()).unwrap(), false);
+        let user = User::new(
+            Email::new("test@example.com".into()).unwrap(),
+            Password::new("password".into()).unwrap(),
+            false,
+        );
         store.insert(user).unwrap();
-        assert!(store.validate(&Email::new("test@example.com".into()).unwrap(), "password").is_ok());
-        assert!(store.validate(&Email::new("test@example.com".into()).unwrap(), "wrong_password").is_err());
+        assert!(store
+            .validate(&Email::new("test@example.com".into()).unwrap(), "password")
+            .is_ok());
+        assert!(store
+            .validate(
+                &Email::new("test@example.com".into()).unwrap(),
+                "wrong_password"
+            )
+            .is_err());
     }
 }

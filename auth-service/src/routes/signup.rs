@@ -1,5 +1,3 @@
-use std::f32::consts::E;
-
 use axum::{
     extract::State,
     http::{self},
@@ -10,8 +8,11 @@ use serde::Serialize;
 
 use crate::{
     app_state::AppState,
-    domain::{models::{Email, Password}, AuthAPIError, User},
-    services::{Storage, UserStore, UserStoreError},
+    domain::{
+        models::{Email, Password},
+        AuthAPIError, User,
+    },
+    services::{UserStore, UserStoreError},
 };
 
 pub async fn signup_handler<T>(
@@ -42,9 +43,9 @@ where
         }
         Err(e) => {
             if let UserStoreError::UserAlreadyExists = e {
-                return Err(AuthAPIError::UserAlreadyExists);
+                Err(AuthAPIError::UserAlreadyExists)
             } else {
-                return Err(AuthAPIError::UnexpectedError);
+                Err(AuthAPIError::UnexpectedError)
             }
         }
     }

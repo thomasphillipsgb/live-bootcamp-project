@@ -11,16 +11,11 @@ async fn should_return_422_for_invalid_signup() {
         serde_json::json!({ "password": "anotherPassword!", "requires2FA": false }),
         serde_json::json!({ "email": email, "requires2FA": false }),
         serde_json::json!({ "email": email, "password": "anotherPassword!" }),
-        ];
+    ];
 
     for case in test_cases {
         let response = app.post_signup(&case).await;
-        assert_eq!(
-            response.status().as_u16(),
-            422,
-            "Failed for case: {}",
-            case
-        );
+        assert_eq!(response.status().as_u16(), 422, "Failed for case: {}", case);
     }
 }
 
@@ -72,7 +67,7 @@ async fn should_return_400_if_invalid_input() {
     let test_cases = [
         serde_json::json!({ "email": "not-a-valid-email", "password": "anotherPassword!", "requires2FA": false }),
         serde_json::json!({ "email": "", "password": "anotherPassword!", "requires2FA": false }),
-        serde_json::json!({ "email": "<script>alert('xss')</script>", "password": "anotherPassword!", "requires2FA": false })
+        serde_json::json!({ "email": "<script>alert('xss')</script>", "password": "anotherPassword!", "requires2FA": false }),
     ];
 
     for i in test_cases {

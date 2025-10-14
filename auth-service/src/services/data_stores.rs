@@ -1,4 +1,7 @@
-use crate::{domain::{models::Email, User}, services::Storage};
+use crate::{
+    domain::{models::Email, User},
+    services::Storage,
+};
 
 pub trait UserStore: Storage<Email, User, UserStoreError> {}
 

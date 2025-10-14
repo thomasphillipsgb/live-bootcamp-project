@@ -1,11 +1,11 @@
-pub mod user;
 pub mod error;
+pub mod user;
 
-pub use user::*;
 pub use error::*;
+pub use user::*;
 
 pub mod models {
-    use validator::{ValidateEmail};
+    use validator::ValidateEmail;
 
     #[derive(Clone, Eq, Hash, PartialEq)]
     pub struct Email(String);
@@ -31,8 +31,7 @@ pub mod models {
 
     impl Password {
         pub fn new(password: String) -> Result<Self, ()> {
-            if password.trim().is_empty()
-            || password.len() < 8 {
+            if password.trim().is_empty() || password.len() < 8 {
                 return Err(());
             }
             // Add password validation logic if needed

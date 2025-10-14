@@ -8,4 +8,3 @@ async fn login_returns_200() {
 
     assert_eq!(response.status().as_u16(), 200);
 }
-
