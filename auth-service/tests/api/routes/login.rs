@@ -1,10 +1,10 @@
 use crate::helpers::TestApp;
 
 #[tokio::test]
-async fn login_returns_200() {
+async fn login_returns_422_if_malformed_request() {
     let app = TestApp::new().await;
 
-    let response = app.post_login().await;
+    let response = app.post_login(&serde_json::json!({"invalid": "data"})).await;
 
-    assert_eq!(response.status().as_u16(), 200);
+    assert_eq!(response.status(), 422);
 }
