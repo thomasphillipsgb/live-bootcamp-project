@@ -1,9 +1,10 @@
 use axum::{extract::State, http, response::IntoResponse, Json};
+use axum_extra::extract::CookieJar;
 
 use crate::{app_state::AppState, domain::{
     models::{Email, Password},
     AuthAPIError,
-}, services::UserStore};
+}, services::UserStore, utils::auth::generate_auth_cookie};
 
 #[derive(serde::Deserialize)]
 pub struct LoginRequest {
@@ -13,8 +14,9 @@ pub struct LoginRequest {
 
 pub async fn login_handler<T>(
     State(state): State<AppState<T>>,
+    jar: CookieJar,
     Json(request): Json<LoginRequest>,
-) -> Result<impl IntoResponse, AuthAPIError>
+) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)
 where
     T: UserStore,
     {
@@ -23,13 +25,16 @@ where
 
     let (email, password) = match (Email::new(email), Password::new(password)) {
         (Ok(email), Ok(password)) => (email, password),
-        _ => return Err(AuthAPIError::InvalidCredentials),
+        _ => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };
 
     let user_store = &state.user_store.read().await;
     if let Ok(_) = user_store.validate(&email, password.as_ref()) {
-        Ok(http::StatusCode::OK)
+        let auth_cookie = generate_auth_cookie(&email);
+
+        let jar = jar.add(auth_cookie.unwrap());
+        (jar, Ok(http::StatusCode::OK))
     } else {
-        Err(AuthAPIError::IncorrectCredentials)
+        (jar, Err(AuthAPIError::IncorrectCredentials))
     }
 }
