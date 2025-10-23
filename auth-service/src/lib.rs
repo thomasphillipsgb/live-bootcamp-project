@@ -6,14 +6,14 @@ pub mod utils;
 use std::error::Error;
 
 use axum::{
-    http,
+    http::{self, Method},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
     serve::Serve,
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use tower_http::services::ServeDir;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 
 use crate::{
     app_state::AppState,
@@ -34,6 +34,19 @@ impl Application {
     where
         T: UserStore + Clone + Send + Sync + 'static,
     {
+               let allowed_origins = [
+            "http://localhost:8000".parse()?,
+            // TODO: Replace [YOUR_DROPLET_IP] with your Droplet IP address
+            "http://161.35.46.112:8000".parse()?,
+        ];
+
+        let cors = CorsLayer::new()
+            // Allow GET and POST requests
+            .allow_methods([Method::GET, Method::POST])
+            // Allow cookies to be included in requests
+            .allow_credentials(true)
+            .allow_origin(allowed_origins);
+
         let router = Router::new()
             .fallback_service(ServeDir::new("assets"))
             .route("/hello", get(hello_handler))
@@ -42,7 +55,8 @@ impl Application {
             .route("/logout", post(logout_handler))
             .route("/verify-2fa", post(verify_2fa_handler))
             .route("/verify-token", post(verify_token_handler))
-            .with_state(app_state);
+            .with_state(app_state)
+            .layer(cors);
 
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
