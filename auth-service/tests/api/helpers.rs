@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use auth_service::Application;
+use auth_service::{utils::constants::test, Application};
 use uuid::Uuid;
 
 pub struct TestApp {
@@ -16,7 +16,7 @@ impl TestApp {
         ));
         let app_state = auth_service::app_state::AppState::new(user_store);
 
-        let app = Application::build(app_state, "127.0.0.1:0")
+        let app = Application::build(app_state, test::APP_ADDRESS)
             .await
             .expect("Failed to build application");
         let address = format!("http://{}", app.address);
