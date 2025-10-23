@@ -1,5 +1,5 @@
 use axum::{http::StatusCode, response::IntoResponse};
-use axum_extra::extract::CookieJar;
+use axum_extra::extract::{cookie::Cookie, CookieJar};
 
 use crate::{domain::AuthAPIError, utils::{auth::validate_token, constants::JWT_COOKIE_NAME}};
 
@@ -8,6 +8,8 @@ pub async fn logout_handler(jar: CookieJar) -> Result<(CookieJar, impl IntoRespo
     let token = cookie.value().to_owned();
 
     validate_token(&token).await.map_err(|_| AuthAPIError::InvalidToken)?;
+
+    let jar = jar.remove(Cookie::from(JWT_COOKIE_NAME));
 
     Ok((jar, StatusCode::OK))
 }
