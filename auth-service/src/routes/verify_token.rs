@@ -1,14 +1,27 @@
-use axum::{http, response::IntoResponse, Json};
+use std::ops::Deref;
+
+use axum::{extract::State, http, response::IntoResponse, Json};
 use serde_json::json;
 
-use crate::utils::auth::validate_token;
+use crate::{
+    app_state::AppState,
+    services::{BannedTokenStore, UserStore},
+    utils::auth::validate_token,
+};
 
 #[derive(serde::Deserialize)]
 pub struct VerifyTokenRequest {
     pub token: String,
 }
 
-pub async fn verify_token_handler(Json(payload): Json<VerifyTokenRequest>) -> impl IntoResponse {
+pub async fn verify_token_handler<T, U>(
+    State(app_state): State<AppState<T, U>>,
+    Json(payload): Json<VerifyTokenRequest>,
+) -> impl IntoResponse
+where
+    T: UserStore,
+    U: BannedTokenStore,
+{
     let token = payload.token;
     if token.trim().is_empty() {
         return (
@@ -17,7 +30,10 @@ pub async fn verify_token_handler(Json(payload): Json<VerifyTokenRequest>) -> im
         );
     }
 
-    if validate_token(&token).await.is_ok() {
+    if validate_token(&token, &*app_state.banned_token_store.read().await)
+        .await
+        .is_ok()
+    {
         (
             http::StatusCode::OK,
             Json(json!({"message": "Token is valid"})),

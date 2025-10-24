@@ -21,7 +21,7 @@ use crate::{
     routes::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
-    services::UserStore,
+    services::{BannedTokenStore, UserStore},
 };
 
 pub struct Application {
@@ -30,11 +30,15 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build<T>(app_state: AppState<T>, address: &str) -> Result<Self, Box<dyn Error>>
+    pub async fn build<T, U>(
+        app_state: AppState<T, U>,
+        address: &str,
+    ) -> Result<Self, Box<dyn Error>>
     where
         T: UserStore + Clone + Send + Sync + 'static,
+        U: BannedTokenStore + Clone + Send + Sync + 'static,
     {
-               let allowed_origins = [
+        let allowed_origins = [
             "http://localhost:8000".parse()?,
             // TODO: Replace [YOUR_DROPLET_IP] with your Droplet IP address
             "http://161.35.46.112:8000".parse()?,
@@ -90,16 +94,12 @@ impl IntoResponse for AuthAPIError {
             }
             AuthAPIError::UnexpectedError => {
                 (http::StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
-            },
+            }
             AuthAPIError::IncorrectCredentials => {
                 (http::StatusCode::UNAUTHORIZED, "Incorrect credentials")
-            },
-            AuthAPIError::MissingToken => {
-                (http::StatusCode::BAD_REQUEST, "Missing token")
-            },
-            AuthAPIError::InvalidToken => {
-                (http::StatusCode::UNAUTHORIZED, "Invalid token")
-            },
+            }
+            AuthAPIError::MissingToken => (http::StatusCode::BAD_REQUEST, "Missing token"),
+            AuthAPIError::InvalidToken => (http::StatusCode::UNAUTHORIZED, "Invalid token"),
         };
         let body = Json(ErrorResponse {
             error: error_message.to_string(),
@@ -112,25 +112,36 @@ pub mod app_state {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
+    use crate::services::BannedTokenStore;
     use crate::services::UserStore;
 
     // Using a type alias to improve readability!
     pub type UserStoreType<T> = Arc<RwLock<T>>;
+    pub type BannedTokenStoreType<U> = Arc<RwLock<U>>;
 
     #[derive(Clone)]
-    pub struct AppState<T>
+    pub struct AppState<T, U>
     where
         T: UserStore,
+        U: BannedTokenStore,
     {
         pub user_store: UserStoreType<T>,
+        pub banned_token_store: BannedTokenStoreType<U>,
     }
 
-    impl<T> AppState<T>
+    impl<T, U> AppState<T, U>
     where
         T: UserStore,
+        U: BannedTokenStore,
     {
-        pub fn new(user_store: UserStoreType<T>) -> Self {
-            Self { user_store }
+        pub fn new(
+            user_store: UserStoreType<T>,
+            banned_token_store: BannedTokenStoreType<U>,
+        ) -> Self {
+            Self {
+                user_store,
+                banned_token_store,
+            }
         }
     }
 }

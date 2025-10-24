@@ -1,10 +1,15 @@
 use axum::{extract::State, http, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 
-use crate::{app_state::AppState, domain::{
-    models::{Email, Password},
-    AuthAPIError,
-}, services::UserStore, utils::auth::generate_auth_cookie};
+use crate::{
+    app_state::AppState,
+    domain::{
+        models::{Email, Password},
+        AuthAPIError,
+    },
+    services::{BannedTokenStore, UserStore},
+    utils::auth::generate_auth_cookie,
+};
 
 #[derive(serde::Deserialize)]
 pub struct LoginRequest {
@@ -12,14 +17,15 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-pub async fn login_handler<T>(
-    State(state): State<AppState<T>>,
+pub async fn login_handler<T, U>(
+    State(state): State<AppState<T, U>>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>,
 ) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)
 where
     T: UserStore,
-    {
+    U: BannedTokenStore,
+{
     let email = request.email;
     let password = request.password;
 

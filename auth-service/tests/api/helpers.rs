@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use auth_service::{utils::constants::test, Application};
+use auth_service::{services::BannedTokenStore, utils::constants::test, Application};
 use uuid::Uuid;
 
 pub struct TestApp {
     pub address: String,
     pub cookie_jar: Arc<reqwest::cookie::Jar>,
     pub http_client: reqwest::Client,
+    pub banned_token_store: Arc<tokio::sync::RwLock<dyn BannedTokenStore>>,
 }
 
 impl TestApp {
@@ -14,7 +15,11 @@ impl TestApp {
         let user_store = Arc::new(tokio::sync::RwLock::new(
             auth_service::services::hashmap_user_store::HashMapUserStore::new(),
         ));
-        let app_state = auth_service::app_state::AppState::new(user_store);
+        let banned_token_store = Arc::new(tokio::sync::RwLock::new(
+            auth_service::services::hashset_banned_store::HashsetBannedTokenStore::new(),
+        ));
+        let app_state =
+            auth_service::app_state::AppState::new(user_store, banned_token_store.clone());
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
@@ -34,6 +39,7 @@ impl TestApp {
             address,
             cookie_jar,
             http_client,
+            banned_token_store,
         }
     }
 

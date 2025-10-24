@@ -12,15 +12,16 @@ use crate::{
         models::{Email, Password},
         AuthAPIError, User,
     },
-    services::{UserStore, UserStoreError},
+    services::{BannedTokenStore, UserStore, UserStoreError},
 };
 
-pub async fn signup_handler<T>(
-    State(app_state): State<AppState<T>>,
+pub async fn signup_handler<T, U>(
+    State(app_state): State<AppState<T, U>>,
     Json(request): Json<SignupRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError>
 where
     T: UserStore,
+    U: BannedTokenStore,
 {
     let email = request.email;
     let password = request.password;
