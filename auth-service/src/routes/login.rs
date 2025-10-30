@@ -69,15 +69,26 @@ where
 
     let two_fa_store = &mut state.two_fa_code_store.write().await;
     let add_result = two_fa_store
-        .add_code(email.clone(), login_attempt_id.clone(), code)
+        .add_code(email.clone(), login_attempt_id.clone(), code.clone())
         .await;
     if add_result.is_ok() {
-        // Finally, we need to return the login attempt ID to the client
-        let response = Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
-            message: "2FA required".to_owned(),
-            login_attempt_id: login_attempt_id.as_ref().to_owned(),
-        }));
-        return (jar, Ok((http::StatusCode::PARTIAL_CONTENT, response)));
+        let email_client = &state.email_client.read().await;
+        if let Ok(_) = email_client
+            .send_email(
+                email,
+                "Your 2FA Code",
+                &format!("Your 2FA code is: {}", code.as_ref()),
+            )
+            .await
+        {
+            let response = Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
+                message: "2FA required".to_owned(),
+                login_attempt_id: login_attempt_id.as_ref().to_owned(),
+            }));
+            return (jar, Ok((http::StatusCode::PARTIAL_CONTENT, response)));
+        } else {
+            return (jar, Err(AuthAPIError::UnexpectedError));
+        }
     } else {
         return (jar, Err(AuthAPIError::UnexpectedError));
     }
