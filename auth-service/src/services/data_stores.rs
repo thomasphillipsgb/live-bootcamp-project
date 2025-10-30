@@ -1,9 +1,18 @@
-use crate::{
-    domain::{models::Email, User},
-    services::Storage,
-};
+use std::future::Future;
 
-pub trait UserStore: Storage<Email, User, UserStoreError> {}
+use crate::domain::{models::Email, User};
+
+// Email, crate::domain::User, crate::services::UserStoreError
+
+pub trait UserStore {
+    fn insert(&mut self, value: User) -> impl Future<Output = Result<(), UserStoreError>> + Send;
+    fn get(&self, key: &Email) -> impl Future<Output = Result<User, UserStoreError>> + Send;
+    fn validate(
+        &self,
+        key: &Email,
+        value: &str,
+    ) -> impl Future<Output = Result<(), UserStoreError>> + Send;
+}
 
 #[derive(Debug, PartialEq)]
 pub enum UserStoreError {

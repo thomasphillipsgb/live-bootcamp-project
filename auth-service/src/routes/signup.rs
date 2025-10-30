@@ -35,7 +35,7 @@ where
 
     let mut user_store = app_state.user_store.write().await;
 
-    match user_store.insert(user) {
+    match user_store.insert(user).await {
         Ok(_) => {
             let response = Json(SignupResponse {
                 message: "User created successfully!".to_string(),

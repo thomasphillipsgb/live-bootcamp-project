@@ -17,7 +17,7 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 
 use crate::{
     app_state::AppState,
-    domain::AuthAPIError,
+    domain::{models::Email, AuthAPIError},
     routes::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
@@ -112,6 +112,7 @@ pub mod app_state {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
+    use crate::domain::models::Email;
     use crate::services::BannedTokenStore;
     use crate::services::UserStore;
 

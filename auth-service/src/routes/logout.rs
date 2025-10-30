@@ -3,7 +3,7 @@ use axum_extra::extract::{cookie::Cookie, CookieJar};
 
 use crate::{
     app_state::AppState,
-    domain::AuthAPIError,
+    domain::{models::Email, AuthAPIError},
     services::{BannedTokenStore, UserStore},
     utils::{auth::validate_token, constants::JWT_COOKIE_NAME},
 };
@@ -13,7 +13,7 @@ pub async fn logout_handler<T, U>(
     state: State<AppState<T, U>>,
 ) -> Result<(CookieJar, impl IntoResponse), AuthAPIError>
 where
-    T: UserStore,
+    T: UserStore + Send + Sync,
     U: BannedTokenStore,
 {
     let cookie = jar.get(JWT_COOKIE_NAME).ok_or(AuthAPIError::MissingToken)?;
