@@ -4,7 +4,8 @@ pub mod hashmap_user_store;
 pub mod hashset_banned_store;
 
 pub use data_stores::{
-    BannedTokenStore, TwoFACodeStore, TwoFACodeStoreError, UserStore, UserStoreError,
+    BannedTokenStore, LoginAttemptId, TwoFACode, TwoFACodeStore, TwoFACodeStoreError, UserStore,
+    UserStoreError,
 };
 pub use hashmap_two_fa_code_store::HashmapTwoFACodeStore;
 pub use hashmap_user_store::HashMapUserStore;

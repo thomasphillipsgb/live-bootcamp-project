@@ -8,7 +8,7 @@ use crate::{
         models::{Email, Password},
         AuthAPIError,
     },
-    services::{BannedTokenStore, TwoFACodeStore, UserStore},
+    services::{BannedTokenStore, LoginAttemptId, TwoFACode, TwoFACodeStore, UserStore},
     utils::auth::generate_auth_cookie,
 };
 
@@ -40,7 +40,7 @@ where
     if let Ok(_) = user_store.validate(&email, password.as_ref()).await {
         let user = user_store.get(&email).await.unwrap();
         match user.requires_2fa {
-            true => handle_2fa(jar).await,
+            true => handle_2fa(&email, &state, jar).await,
             false => handle_no_2fa(&user.email, jar).await,
         }
     } else {
@@ -48,22 +48,37 @@ where
     }
 }
 
-async fn handle_2fa(
+async fn handle_2fa<T, U, V>(
+    email: &Email,
+    state: &AppState<T, U, V>,
     jar: CookieJar,
 ) -> (
     CookieJar,
     Result<(http::StatusCode, Json<LoginResponse>), AuthAPIError>,
-) {
-    (
-        jar,
-        Ok((
-            http::StatusCode::PARTIAL_CONTENT,
-            Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
-                message: "2FA required".to_string(),
-                login_attempt_id: "123456".to_string(),
-            })),
-        )),
-    )
+)
+where
+    T: UserStore + Send + Sync,
+    U: BannedTokenStore,
+    V: TwoFACodeStore,
+{
+    // First, we must generate a new random login attempt ID and 2FA code
+    let login_attempt_id = LoginAttemptId::default();
+    let code = TwoFACode::default();
+
+    let two_fa_store = &mut state.two_fa_code_store.write().await;
+    let add_result = two_fa_store
+        .add_code(email.clone(), login_attempt_id.clone(), code)
+        .await;
+    if add_result.is_ok() {
+        // Finally, we need to return the login attempt ID to the client
+        let response = Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
+            message: "2FA required".to_owned(),
+            login_attempt_id: login_attempt_id.as_ref().to_owned(),
+        }));
+        return (jar, Ok((http::StatusCode::PARTIAL_CONTENT, response)));
+    } else {
+        return (jar, Err(AuthAPIError::UnexpectedError));
+    }
 }
 
 // New!

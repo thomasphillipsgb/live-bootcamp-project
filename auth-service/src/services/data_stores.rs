@@ -30,17 +30,20 @@ pub trait BannedTokenStore {
 }
 
 pub trait TwoFACodeStore {
-    async fn add_code(
+    fn add_code(
         &mut self,
         email: Email,
         login_attempt_id: LoginAttemptId,
         code: TwoFACode,
-    ) -> Result<(), TwoFACodeStoreError>;
-    async fn remove_code(&mut self, email: &Email) -> Result<(), TwoFACodeStoreError>;
-    async fn get_code(
+    ) -> impl Future<Output = Result<(), TwoFACodeStoreError>> + Send;
+    fn remove_code(
+        &mut self,
+        email: &Email,
+    ) -> impl Future<Output = Result<(), TwoFACodeStoreError>> + Send;
+    fn get_code(
         &self,
         email: &Email,
-    ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>;
+    ) -> impl Future<Output = Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>> + Send;
 }
 
 #[derive(Debug, PartialEq)]
