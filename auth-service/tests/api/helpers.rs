@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use auth_service::{services::BannedTokenStore, utils::constants::test, Application};
+use auth_service::{
+    services::{BannedTokenStore, HashmapTwoFACodeStore},
+    utils::constants::test,
+    Application,
+};
 use uuid::Uuid;
 
 pub struct TestApp {
@@ -8,6 +12,7 @@ pub struct TestApp {
     pub cookie_jar: Arc<reqwest::cookie::Jar>,
     pub http_client: reqwest::Client,
     pub banned_token_store: Arc<tokio::sync::RwLock<dyn BannedTokenStore>>,
+    pub two_fa_code_store: Arc<tokio::sync::RwLock<HashmapTwoFACodeStore>>,
 }
 
 impl TestApp {
@@ -47,6 +52,7 @@ impl TestApp {
             cookie_jar,
             http_client,
             banned_token_store,
+            two_fa_code_store,
         }
     }
 
