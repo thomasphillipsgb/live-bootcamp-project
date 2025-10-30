@@ -18,8 +18,15 @@ impl TestApp {
         let banned_token_store = Arc::new(tokio::sync::RwLock::new(
             auth_service::services::hashset_banned_store::HashsetBannedTokenStore::new(),
         ));
-        let app_state =
-            auth_service::app_state::AppState::new(user_store, banned_token_store.clone());
+        let two_fa_code_store = Arc::new(tokio::sync::RwLock::new(
+            auth_service::services::hashmap_two_fa_code_store::HashmapTwoFACodeStore::new(),
+        ));
+
+        let app_state = auth_service::app_state::AppState::new(
+            user_store.clone(),
+            banned_token_store.clone(),
+            two_fa_code_store.clone(),
+        );
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await

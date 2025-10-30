@@ -8,7 +8,7 @@ use crate::{
         models::{Email, Password},
         AuthAPIError,
     },
-    services::{BannedTokenStore, UserStore},
+    services::{BannedTokenStore, TwoFACodeStore, UserStore},
     utils::auth::generate_auth_cookie,
 };
 
@@ -18,14 +18,15 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-pub async fn login_handler<T, U>(
-    State(state): State<AppState<T, U>>,
+pub async fn login_handler<T, U, V>(
+    State(state): State<AppState<T, U, V>>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>,
 ) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)
 where
     T: UserStore + Send + Sync,
     U: BannedTokenStore,
+    V: TwoFACodeStore,
 {
     let email = request.email;
     let password = request.password;

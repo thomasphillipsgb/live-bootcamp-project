@@ -11,7 +11,16 @@ async fn main() {
         auth_service::services::hashmap_user_store::HashMapUserStore::new(),
     ));
     let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::new()));
-    let app_state = auth_service::app_state::AppState::new(user_store, banned_token_store);
+    let two_fa_code_store = Arc::new(RwLock::new(
+        auth_service::services::HashmapTwoFACodeStore::new(),
+    ));
+
+    let app_state = auth_service::app_state::AppState::new(
+        user_store.clone(),
+        banned_token_store.clone(),
+        two_fa_code_store.clone(),
+    );
+
     let app = Application::build(app_state, prod::APP_ADDRESS)
         .await
         .expect("Failed to build application");

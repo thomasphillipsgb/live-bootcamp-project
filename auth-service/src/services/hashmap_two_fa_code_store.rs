@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 use crate::{
     domain::models::Email,
@@ -8,9 +8,17 @@ use crate::{
     },
 };
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct HashmapTwoFACodeStore {
     codes: HashMap<Email, (LoginAttemptId, TwoFACode)>,
+}
+
+impl HashmapTwoFACodeStore {
+    pub fn new() -> Self {
+        Self {
+            codes: HashMap::new(),
+        }
+    }
 }
 
 impl TwoFACodeStore for HashmapTwoFACodeStore {

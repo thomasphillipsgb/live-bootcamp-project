@@ -21,7 +21,7 @@ use crate::{
     routes::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
-    services::{BannedTokenStore, UserStore},
+    services::{BannedTokenStore, TwoFACodeStore, UserStore},
 };
 
 pub struct Application {
@@ -30,13 +30,14 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build<T, U>(
-        app_state: AppState<T, U>,
+    pub async fn build<T, U, V>(
+        app_state: AppState<T, U, V>,
         address: &str,
     ) -> Result<Self, Box<dyn Error>>
     where
         T: UserStore + Clone + Send + Sync + 'static,
         U: BannedTokenStore + Clone + Send + Sync + 'static,
+        V: TwoFACodeStore + Clone + Send + Sync + 'static,
     {
         let allowed_origins = [
             "http://localhost:8000".parse()?,
@@ -114,34 +115,41 @@ pub mod app_state {
 
     use crate::domain::models::Email;
     use crate::services::BannedTokenStore;
+    use crate::services::TwoFACodeStore;
     use crate::services::UserStore;
 
     // Using a type alias to improve readability!
     pub type UserStoreType<T> = Arc<RwLock<T>>;
     pub type BannedTokenStoreType<U> = Arc<RwLock<U>>;
+    pub type TwoFACodeStoreType<V> = Arc<RwLock<V>>;
 
     #[derive(Clone)]
-    pub struct AppState<T, U>
+    pub struct AppState<T, U, V>
     where
         T: UserStore,
         U: BannedTokenStore,
+        V: TwoFACodeStore,
     {
         pub user_store: UserStoreType<T>,
         pub banned_token_store: BannedTokenStoreType<U>,
+        pub two_fa_code_store: TwoFACodeStoreType<V>,
     }
 
-    impl<T, U> AppState<T, U>
+    impl<T, U, V> AppState<T, U, V>
     where
         T: UserStore,
         U: BannedTokenStore,
+        V: TwoFACodeStore,
     {
         pub fn new(
             user_store: UserStoreType<T>,
             banned_token_store: BannedTokenStoreType<U>,
+            two_fa_code_store: TwoFACodeStoreType<V>,
         ) -> Self {
             Self {
                 user_store,
                 banned_token_store,
+                two_fa_code_store,
             }
         }
     }
