@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use auth_service::{
+    domain::mock_email_client::MockEmailClient,
     services::{BannedTokenStore, HashmapTwoFACodeStore},
     utils::constants::test,
     Application,
@@ -26,11 +27,13 @@ impl TestApp {
         let two_fa_code_store = Arc::new(tokio::sync::RwLock::new(
             auth_service::services::hashmap_two_fa_code_store::HashmapTwoFACodeStore::new(),
         ));
+        let email_client = Arc::new(tokio::sync::RwLock::new(MockEmailClient {}));
 
         let app_state = auth_service::app_state::AppState::new(
             user_store.clone(),
             banned_token_store.clone(),
             two_fa_code_store.clone(),
+            email_client.clone(),
         );
 
         let app = Application::build(app_state, test::APP_ADDRESS)

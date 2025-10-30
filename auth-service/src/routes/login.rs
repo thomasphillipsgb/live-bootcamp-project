@@ -6,7 +6,7 @@ use crate::{
     app_state::AppState,
     domain::{
         models::{Email, Password},
-        AuthAPIError,
+        AuthAPIError, EmailClient,
     },
     services::{BannedTokenStore, LoginAttemptId, TwoFACode, TwoFACodeStore, UserStore},
     utils::auth::generate_auth_cookie,
@@ -18,8 +18,8 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-pub async fn login_handler<T, U, V>(
-    State(state): State<AppState<T, U, V>>,
+pub async fn login_handler<T, U, V, W>(
+    State(state): State<AppState<T, U, V, W>>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>,
 ) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)
@@ -27,6 +27,7 @@ where
     T: UserStore + Send + Sync,
     U: BannedTokenStore,
     V: TwoFACodeStore,
+    W: EmailClient,
 {
     let email = request.email;
     let password = request.password;
@@ -48,9 +49,9 @@ where
     }
 }
 
-async fn handle_2fa<T, U, V>(
+async fn handle_2fa<T, U, V, W>(
     email: &Email,
-    state: &AppState<T, U, V>,
+    state: &AppState<T, U, V, W>,
     jar: CookieJar,
 ) -> (
     CookieJar,
@@ -60,6 +61,7 @@ where
     T: UserStore + Send + Sync,
     U: BannedTokenStore,
     V: TwoFACodeStore,
+    W: EmailClient,
 {
     // First, we must generate a new random login attempt ID and 2FA code
     let login_attempt_id = LoginAttemptId::default();

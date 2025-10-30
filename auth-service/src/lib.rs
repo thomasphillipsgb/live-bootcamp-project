@@ -17,7 +17,7 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 
 use crate::{
     app_state::AppState,
-    domain::{models::Email, AuthAPIError},
+    domain::{models::Email, AuthAPIError, EmailClient},
     routes::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
@@ -30,14 +30,15 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build<T, U, V>(
-        app_state: AppState<T, U, V>,
+    pub async fn build<T, U, V, W>(
+        app_state: AppState<T, U, V, W>,
         address: &str,
     ) -> Result<Self, Box<dyn Error>>
     where
         T: UserStore + Clone + Send + Sync + 'static,
         U: BannedTokenStore + Clone + Send + Sync + 'static,
         V: TwoFACodeStore + Clone + Send + Sync + 'static,
+        W: EmailClient + Clone + Send + Sync + 'static,
     {
         let allowed_origins = [
             "http://localhost:8000".parse()?,
@@ -113,7 +114,7 @@ pub mod app_state {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    use crate::domain::models::Email;
+    use crate::domain::EmailClient;
     use crate::services::BannedTokenStore;
     use crate::services::TwoFACodeStore;
     use crate::services::UserStore;
@@ -122,34 +123,40 @@ pub mod app_state {
     pub type UserStoreType<T> = Arc<RwLock<T>>;
     pub type BannedTokenStoreType<U> = Arc<RwLock<U>>;
     pub type TwoFACodeStoreType<V> = Arc<RwLock<V>>;
+    pub type EmailClientType<W> = Arc<RwLock<W>>;
 
     #[derive(Clone)]
-    pub struct AppState<T, U, V>
+    pub struct AppState<T, U, V, W>
     where
         T: UserStore,
         U: BannedTokenStore,
         V: TwoFACodeStore,
+        W: EmailClient,
     {
         pub user_store: UserStoreType<T>,
         pub banned_token_store: BannedTokenStoreType<U>,
         pub two_fa_code_store: TwoFACodeStoreType<V>,
+        pub email_client: EmailClientType<W>,
     }
 
-    impl<T, U, V> AppState<T, U, V>
+    impl<T, U, V, W> AppState<T, U, V, W>
     where
         T: UserStore,
         U: BannedTokenStore,
         V: TwoFACodeStore,
+        W: EmailClient,
     {
         pub fn new(
             user_store: UserStoreType<T>,
             banned_token_store: BannedTokenStoreType<U>,
             two_fa_code_store: TwoFACodeStoreType<V>,
+            email_client: EmailClientType<W>,
         ) -> Self {
             Self {
                 user_store,
                 banned_token_store,
                 two_fa_code_store,
+                email_client,
             }
         }
     }

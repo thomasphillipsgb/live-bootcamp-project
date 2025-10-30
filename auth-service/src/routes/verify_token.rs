@@ -5,6 +5,7 @@ use serde_json::json;
 
 use crate::{
     app_state::AppState,
+    domain::EmailClient,
     services::{BannedTokenStore, TwoFACodeStore, UserStore},
     utils::auth::validate_token,
 };
@@ -14,14 +15,15 @@ pub struct VerifyTokenRequest {
     pub token: String,
 }
 
-pub async fn verify_token_handler<T, U, V>(
-    State(app_state): State<AppState<T, U, V>>,
+pub async fn verify_token_handler<T, U, V, W>(
+    State(app_state): State<AppState<T, U, V, W>>,
     Json(payload): Json<VerifyTokenRequest>,
 ) -> impl IntoResponse
 where
     T: UserStore,
     U: BannedTokenStore,
     V: TwoFACodeStore,
+    W: EmailClient,
 {
     let token = payload.token;
     if token.trim().is_empty() {
