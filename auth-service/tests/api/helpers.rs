@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use auth_service::{
     domain::mock_email_client::MockEmailClient,
-    services::{BannedTokenStore, HashmapTwoFACodeStore},
+    services::{BannedTokenStore, HashMapUserStore, HashmapTwoFACodeStore},
     utils::constants::test,
     Application,
 };
@@ -14,6 +14,7 @@ pub struct TestApp {
     pub http_client: reqwest::Client,
     pub banned_token_store: Arc<tokio::sync::RwLock<dyn BannedTokenStore>>,
     pub two_fa_code_store: Arc<tokio::sync::RwLock<HashmapTwoFACodeStore>>,
+    pub user_store: Arc<tokio::sync::RwLock<HashMapUserStore>>,
 }
 
 impl TestApp {
@@ -56,6 +57,7 @@ impl TestApp {
             http_client,
             banned_token_store,
             two_fa_code_store,
+            user_store,
         }
     }
 
