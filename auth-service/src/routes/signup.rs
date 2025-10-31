@@ -10,17 +10,20 @@ use crate::{
     app_state::AppState,
     domain::{
         models::{Email, Password},
-        AuthAPIError, User,
+        AuthAPIError, EmailClient, User,
     },
-    services::{UserStore, UserStoreError},
+    services::{BannedTokenStore, TwoFACodeStore, UserStore, UserStoreError},
 };
 
-pub async fn signup_handler<T>(
-    State(app_state): State<AppState<T>>,
+pub async fn signup_handler<T, U, V, W>(
+    State(app_state): State<AppState<T, U, V, W>>,
     Json(request): Json<SignupRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError>
 where
     T: UserStore,
+    U: BannedTokenStore,
+    V: TwoFACodeStore,
+    W: EmailClient,
 {
     let email = request.email;
     let password = request.password;
@@ -34,7 +37,7 @@ where
 
     let mut user_store = app_state.user_store.write().await;
 
-    match user_store.insert(user) {
+    match user_store.insert(user).await {
         Ok(_) => {
             let response = Json(SignupResponse {
                 message: "User created successfully!".to_string(),

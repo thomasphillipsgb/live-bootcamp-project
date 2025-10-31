@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use auth_service::Application;
+use auth_service::{
+    domain::mock_email_client::MockEmailClient,
+    services::hashset_banned_store::HashsetBannedTokenStore, utils::constants::prod, Application,
+};
 use tokio::sync::RwLock;
 
 #[tokio::main]
@@ -8,8 +11,20 @@ async fn main() {
     let user_store = Arc::new(RwLock::new(
         auth_service::services::hashmap_user_store::HashMapUserStore::new(),
     ));
-    let app_state = auth_service::app_state::AppState::new(user_store);
-    let app = Application::build(app_state, "0.0.0.0:3000")
+    let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::new()));
+    let two_fa_code_store = Arc::new(RwLock::new(
+        auth_service::services::HashmapTwoFACodeStore::new(),
+    ));
+    let email_client = Arc::new(RwLock::new(MockEmailClient {}));
+
+    let app_state = auth_service::app_state::AppState::new(
+        user_store.clone(),
+        banned_token_store.clone(),
+        two_fa_code_store.clone(),
+        email_client.clone(),
+    );
+
+    let app = Application::build(app_state, prod::APP_ADDRESS)
         .await
         .expect("Failed to build application");
 

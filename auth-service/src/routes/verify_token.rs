@@ -1,5 +1,50 @@
-use axum::{http, response::IntoResponse};
+use std::ops::Deref;
 
-pub async fn verify_token_handler() -> impl IntoResponse {
-    http::StatusCode::OK
+use axum::{extract::State, http, response::IntoResponse, Json};
+use serde_json::json;
+
+use crate::{
+    app_state::AppState,
+    domain::EmailClient,
+    services::{BannedTokenStore, TwoFACodeStore, UserStore},
+    utils::auth::validate_token,
+};
+
+#[derive(serde::Deserialize)]
+pub struct VerifyTokenRequest {
+    pub token: String,
+}
+
+pub async fn verify_token_handler<T, U, V, W>(
+    State(app_state): State<AppState<T, U, V, W>>,
+    Json(payload): Json<VerifyTokenRequest>,
+) -> impl IntoResponse
+where
+    T: UserStore,
+    U: BannedTokenStore,
+    V: TwoFACodeStore,
+    W: EmailClient,
+{
+    let token = payload.token;
+    if token.trim().is_empty() {
+        return (
+            http::StatusCode::UNPROCESSABLE_ENTITY,
+            Json(json!({"error": "Malformed input"})),
+        );
+    }
+
+    if validate_token(&token, &*app_state.banned_token_store.read().await)
+        .await
+        .is_ok()
+    {
+        (
+            http::StatusCode::OK,
+            Json(json!({"message": "Token is valid"})),
+        )
+    } else {
+        (
+            http::StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "Invalid token"})),
+        )
+    }
 }
