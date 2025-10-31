@@ -3,10 +3,11 @@ use auth_service::{
         models::{Email, Password},
         User,
     },
-    services::UserStore,
+    routes::{LoginResponse, TwoFactorAuthResponse},
+    services::{TwoFACodeStore, UserStore},
 };
 
-use crate::helpers::TestApp;
+use crate::{helpers::TestApp, routes::login};
 
 #[tokio::test]
 async fn should_return_422_if_malformed_input() {
@@ -49,8 +50,7 @@ async fn should_return_401_if_incorrect_credentials() {
     let login_response = app
         .post_login(&serde_json::json!({
             "email": "user@example.com",
-            "password": "correct_password",
-            "requires2fa": true
+            "password": "correct_password"
         }))
         .await;
 
@@ -85,8 +85,7 @@ async fn should_return_401_if_old_code() {
     let login_response = app
         .post_login(&serde_json::json!({
             "email": "user@example.com",
-            "password": "correct_password",
-            "requires2fa": true
+            "password": "correct_password"
         }))
         .await;
     assert_eq!(login_response.status().as_u16(), 206);
@@ -94,8 +93,7 @@ async fn should_return_401_if_old_code() {
     let login_response = app
         .post_login(&serde_json::json!({
             "email": "user@example.com",
-            "password": "correct_password",
-            "requires2fa": true
+            "password": "correct_password"
         }))
         .await;
 
@@ -109,4 +107,51 @@ async fn should_return_401_if_old_code() {
         }))
         .await;
     assert_eq!(response.status().as_u16(), 401);
+}
+
+#[tokio::test]
+async fn should_return_200_if_correct_code() {
+    // Make sure to assert the auth cookie gets set
+    let app = TestApp::new().await;
+    app.user_store
+        .write()
+        .await
+        .insert(User::new(
+            Email::new("user@example.com".to_string()).unwrap(),
+            Password::new("correct_password".to_string()).unwrap(),
+            true,
+        ))
+        .await
+        .unwrap();
+
+    let login_response = app
+        .post_login(&serde_json::json!({
+            "email": "user@example.com",
+            "password": "correct_password"
+        }))
+        .await;
+    assert_eq!(login_response.status().as_u16(), 206);
+
+    let (_login_attempt, code) = app
+        .two_fa_code_store
+        .read()
+        .await
+        .get_code(&Email::new("user@example.com".to_string()).unwrap())
+        .await
+        .unwrap();
+
+    let login_response = login_response
+        .json::<TwoFactorAuthResponse>()
+        .await
+        .expect("Failed to parse JSON response");
+
+    let response = app
+        .post_verify_2fa(&serde_json::json!({
+            "email": "user@example.com",
+            "login_attempt_id": login_response.login_attempt_id,
+            "two_fa_code": code.as_ref(),
+        }))
+        .await;
+
+    assert_eq!(response.status().as_u16(), 200);
 }
