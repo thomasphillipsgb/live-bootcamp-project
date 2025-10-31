@@ -53,6 +53,8 @@ where
 #[derive(serde::Deserialize)]
 pub struct Verify2FARequest {
     pub email: String,
+    #[serde(rename = "loginAttemptId")]
     pub login_attempt_id: String,
+    #[serde(rename = "2FACode")]
     pub two_fa_code: String,
 }
