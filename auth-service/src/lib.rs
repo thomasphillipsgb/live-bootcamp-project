@@ -13,6 +13,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgPoolOptions;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
 use crate::{
@@ -22,6 +23,7 @@ use crate::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
     services::{BannedTokenStore, TwoFACodeStore, UserStore},
+    utils::constants::DATABASE_URL,
 };
 
 pub struct Application {
@@ -108,6 +110,14 @@ impl IntoResponse for AuthAPIError {
         });
         (status, body).into_response()
     }
+}
+
+pub async fn get_postgres_pool(database_url: &str) -> Result<sqlx::PgPool, sqlx::Error> {
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(database_url)
+        .await?;
+    Ok(pool)
 }
 
 pub mod app_state {

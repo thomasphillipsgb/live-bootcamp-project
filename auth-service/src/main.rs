@@ -2,8 +2,12 @@ use std::sync::Arc;
 
 use auth_service::{
     domain::mock_email_client::MockEmailClient,
-    services::hashset_banned_store::HashsetBannedTokenStore, utils::constants::prod, Application,
+    get_postgres_pool,
+    services::hashset_banned_store::HashsetBannedTokenStore,
+    utils::constants::{prod, DATABASE_URL},
+    Application,
 };
+use sqlx::PgPool;
 use tokio::sync::RwLock;
 
 #[tokio::main]
@@ -17,6 +21,8 @@ async fn main() {
     ));
     let email_client = Arc::new(RwLock::new(MockEmailClient {}));
 
+    let pg_pool = configure_postgresql().await;
+
     let app_state = auth_service::app_state::AppState::new(
         user_store.clone(),
         banned_token_store.clone(),
@@ -29,4 +35,19 @@ async fn main() {
         .expect("Failed to build application");
 
     app.run().await.expect("Failed to run application");
+}
+
+async fn configure_postgresql() -> PgPool {
+    // Create a new database connection pool
+    let pg_pool = get_postgres_pool(&DATABASE_URL)
+        .await
+        .expect("Failed to create Postgres connection pool!");
+
+    // Run database migrations against our test database!
+    sqlx::migrate!()
+        .run(&pg_pool)
+        .await
+        .expect("Failed to run migrations");
+
+    pg_pool
 }
