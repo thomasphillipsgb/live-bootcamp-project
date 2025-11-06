@@ -18,12 +18,11 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 
 use crate::{
     app_state::AppState,
-    domain::{models::Email, AuthAPIError, EmailClient},
+    domain::{AuthAPIError, EmailClient},
     routes::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
     services::{BannedTokenStore, TwoFACodeStore, UserStore},
-    utils::constants::DATABASE_URL,
 };
 
 pub struct Application {

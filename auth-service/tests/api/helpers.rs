@@ -2,7 +2,12 @@ use std::sync::Arc;
 
 use auth_service::{
     domain::mock_email_client::MockEmailClient,
-    services::{BannedTokenStore, HashMapUserStore, HashmapTwoFACodeStore},
+    services::{
+        data_stores::{
+            hashset_banned_store::HashsetBannedTokenStore, HashMapUserStore, HashmapTwoFACodeStore,
+        },
+        BannedTokenStore,
+    },
     utils::constants::test,
     Application,
 };
@@ -19,15 +24,9 @@ pub struct TestApp {
 
 impl TestApp {
     pub async fn new() -> Self {
-        let user_store = Arc::new(tokio::sync::RwLock::new(
-            auth_service::services::hashmap_user_store::HashMapUserStore::new(),
-        ));
-        let banned_token_store = Arc::new(tokio::sync::RwLock::new(
-            auth_service::services::hashset_banned_store::HashsetBannedTokenStore::new(),
-        ));
-        let two_fa_code_store = Arc::new(tokio::sync::RwLock::new(
-            auth_service::services::hashmap_two_fa_code_store::HashmapTwoFACodeStore::new(),
-        ));
+        let user_store = Arc::new(tokio::sync::RwLock::new(HashMapUserStore::new()));
+        let banned_token_store = Arc::new(tokio::sync::RwLock::new(HashsetBannedTokenStore::new()));
+        let two_fa_code_store = Arc::new(tokio::sync::RwLock::new(HashmapTwoFACodeStore::new()));
         let email_client = Arc::new(tokio::sync::RwLock::new(MockEmailClient {}));
 
         let app_state = auth_service::app_state::AppState::new(
