@@ -15,6 +15,7 @@ use crate::{
     services::{UserStore, UserStoreError},
 };
 
+#[derive(Clone)]
 pub struct PostgresUserStore {
     pool: PgPool,
 }

@@ -56,7 +56,6 @@ impl Application {
 
         let router = Router::new()
             .fallback_service(ServeDir::new("assets"))
-            .route("/hello", get(hello_handler))
             .route("/signup", post(signup_handler))
             .route("/login", post(login_handler))
             .route("/logout", post(logout_handler))
@@ -76,11 +75,6 @@ impl Application {
         println!("listening on {}", &self.address);
         self.server.await
     }
-}
-
-async fn hello_handler() -> Html<&'static str> {
-    println!("hello handler called");
-    Html("<h1>Hello, Rustaceans!</h1>")
 }
 
 #[derive(Serialize, Deserialize)]
