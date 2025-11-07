@@ -12,6 +12,7 @@ use axum::{
     serve::Serve,
     Json, Router,
 };
+use redis::{Client, RedisResult};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{cors::CorsLayer, services::ServeDir};
@@ -111,6 +112,11 @@ pub async fn get_postgres_pool(database_url: &str) -> Result<sqlx::PgPool, sqlx:
         .connect(database_url)
         .await?;
     Ok(pool)
+}
+
+pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {
+    let redis_url = format!("redis://{}", redis_hostname);
+    Client::open(redis_url)
 }
 
 pub mod app_state {
