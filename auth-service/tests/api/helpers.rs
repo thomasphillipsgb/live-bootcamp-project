@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use auth_service::{
     domain::mock_email_client::MockEmailClient,
@@ -13,7 +13,10 @@ use auth_service::{
     utils::constants::{test, DATABASE_URL},
     Application,
 };
-use sqlx::{postgres::PgPoolOptions, Executor, PgPool};
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    Connection, Executor, PgConnection, PgPool,
+};
 use uuid::Uuid;
 
 pub struct TestApp {
@@ -23,11 +26,12 @@ pub struct TestApp {
     pub banned_token_store: Arc<tokio::sync::RwLock<dyn BannedTokenStore>>,
     pub two_fa_code_store: Arc<tokio::sync::RwLock<HashmapTwoFACodeStore>>,
     pub user_store: Arc<tokio::sync::RwLock<PostgresUserStore>>,
+    db_name: String,
 }
 
 impl TestApp {
     pub async fn new() -> Self {
-        let pg_pool = configure_postgresql().await;
+        let (pg_pool, db_name) = configure_postgresql().await;
 
         let user_store = Arc::new(tokio::sync::RwLock::new(PostgresUserStore::new(pg_pool)));
         let banned_token_store = Arc::new(tokio::sync::RwLock::new(HashsetBannedTokenStore::new()));
@@ -62,6 +66,7 @@ impl TestApp {
             banned_token_store,
             two_fa_code_store,
             user_store,
+            db_name,
         }
     }
 
@@ -128,13 +133,26 @@ impl TestApp {
             .await
             .expect("Failed to execute request.")
     }
+
+    pub async fn clean_up(&self) {
+        delete_database(&self.db_name).await;
+    }
+}
+
+impl Drop for TestApp {
+    fn drop(&mut self) {
+        let db_name = self.db_name.clone();
+        tokio::spawn(async move {
+            delete_database(&db_name).await;
+        });
+    }
 }
 
 pub fn get_random_email() -> String {
     format!("{}@example.com", Uuid::new_v4())
 }
 
-async fn configure_postgresql() -> PgPool {
+async fn configure_postgresql() -> (PgPool, String) {
     let postgresql_conn_url = DATABASE_URL.to_owned();
 
     // We are creating a new database for each test case, and we need to ensure each database has a unique name!
@@ -145,9 +163,12 @@ async fn configure_postgresql() -> PgPool {
     let postgresql_conn_url_with_db = format!("{}/{}", postgresql_conn_url, db_name);
 
     // Create a new connection pool and return it
-    get_postgres_pool(&postgresql_conn_url_with_db)
-        .await
-        .expect("Failed to create Postgres connection pool!")
+    (
+        get_postgres_pool(&postgresql_conn_url_with_db)
+            .await
+            .expect("Failed to create Postgres connection pool!"),
+        db_name,
+    )
 }
 
 async fn configure_database(db_conn_string: &str, db_name: &str) {
@@ -176,4 +197,38 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
         .run(&connection)
         .await
         .expect("Failed to migrate the database");
+}
+
+async fn delete_database(db_name: &str) {
+    let postgresql_conn_url: String = DATABASE_URL.to_owned();
+
+    let connection_options = PgConnectOptions::from_str(&postgresql_conn_url)
+        .expect("Failed to parse PostgreSQL connection string");
+
+    let mut connection = PgConnection::connect_with(&connection_options)
+        .await
+        .expect("Failed to connect to Postgres");
+
+    // Kill any active connections to the database
+    connection
+        .execute(
+            format!(
+                r#"
+                SELECT pg_terminate_backend(pg_stat_activity.pid)
+                FROM pg_stat_activity
+                WHERE pg_stat_activity.datname = '{}'
+                  AND pid <> pg_backend_pid();
+        "#,
+                db_name
+            )
+            .as_str(),
+        )
+        .await
+        .expect("Failed to drop the database.");
+
+    // Drop the database
+    connection
+        .execute(format!(r#"DROP DATABASE "{}";"#, db_name).as_str())
+        .await
+        .expect("Failed to drop the database.");
 }
