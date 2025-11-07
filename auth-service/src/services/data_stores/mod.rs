@@ -1,6 +1,7 @@
 pub mod hashmap_two_fa_code_store;
 pub mod hashmap_user_store;
 pub mod hashset_banned_store;
+pub mod postgres_user_store;
 pub use hashmap_two_fa_code_store::HashmapTwoFACodeStore;
 pub use hashmap_user_store::HashMapUserStore;
 
@@ -101,7 +102,7 @@ impl Default for TwoFACode {
     fn default() -> Self {
         // Use the `rand` crate to generate a random 2FA code.
         // The code should be 6 digits (ex: 834629)
-        let code = rand::rng().random_range(100000..999999).to_string();
+        let code = rand::thread_rng().gen_range(100000..999999).to_string();
         TwoFACode(code)
     }
 }
