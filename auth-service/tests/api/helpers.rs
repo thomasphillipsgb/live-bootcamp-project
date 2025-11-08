@@ -33,8 +33,7 @@ pub struct TestApp {
 impl TestApp {
     pub async fn new() -> Self {
         let (pg_pool, db_name) = configure_postgresql().await;
-        let redis_connection = configure_redis();
-        let redis_connection = Arc::new(tokio::sync::RwLock::new(redis_connection));
+        let redis_connection = configure_redis().await;
 
         let user_store = Arc::new(tokio::sync::RwLock::new(PostgresUserStore::new(pg_pool)));
         let banned_token_store = Arc::new(tokio::sync::RwLock::new(RedisBannedTokenStore::new(
@@ -240,9 +239,10 @@ async fn delete_database(db_name: &str) {
         .expect("Failed to drop the database.");
 }
 
-fn configure_redis() -> redis::Connection {
+async fn configure_redis() -> redis::aio::MultiplexedConnection {
     get_redis_client(REDIS_HOST_NAME.to_owned())
         .expect("Failed to get Redis client")
-        .get_connection()
+        .get_multiplexed_async_connection()
+        .await
         .expect("Failed to get Redis connection")
 }

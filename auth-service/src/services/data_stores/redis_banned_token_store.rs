@@ -1,7 +1,4 @@
-use std::sync::Arc;
-
-use redis::{AsyncCommands, Commands, Connection};
-use tokio::sync::RwLock;
+use redis::AsyncCommands;
 
 use crate::{
     services::{data_stores::BannedTokenStoreError, BannedTokenStore},
