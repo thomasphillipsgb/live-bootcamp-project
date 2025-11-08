@@ -6,8 +6,8 @@ use auth_service::{
     services::{
         data_stores::{
             hashset_banned_store::HashsetBannedTokenStore, postgres_user_store::PostgresUserStore,
-            redis_banned_token_store::RedisBannedTokenStore, HashMapUserStore,
-            HashmapTwoFACodeStore,
+            redis_banned_token_store::RedisBannedTokenStore,
+            redis_two_fa_code_store::RedisTwoFACodeStore, HashMapUserStore, HashmapTwoFACodeStore,
         },
         BannedTokenStore,
     },
@@ -25,7 +25,7 @@ pub struct TestApp {
     pub cookie_jar: Arc<reqwest::cookie::Jar>,
     pub http_client: reqwest::Client,
     pub banned_token_store: Arc<tokio::sync::RwLock<RedisBannedTokenStore>>,
-    pub two_fa_code_store: Arc<tokio::sync::RwLock<HashmapTwoFACodeStore>>,
+    pub two_fa_code_store: Arc<tokio::sync::RwLock<RedisTwoFACodeStore>>,
     pub user_store: Arc<tokio::sync::RwLock<PostgresUserStore>>,
     db_name: String,
 }
@@ -34,12 +34,15 @@ impl TestApp {
     pub async fn new() -> Self {
         let (pg_pool, db_name) = configure_postgresql().await;
         let redis_connection = configure_redis();
+        let redis_connection = Arc::new(tokio::sync::RwLock::new(redis_connection));
 
         let user_store = Arc::new(tokio::sync::RwLock::new(PostgresUserStore::new(pg_pool)));
         let banned_token_store = Arc::new(tokio::sync::RwLock::new(RedisBannedTokenStore::new(
-            Arc::new(tokio::sync::RwLock::new(redis_connection)),
+            redis_connection.clone(),
         )));
-        let two_fa_code_store = Arc::new(tokio::sync::RwLock::new(HashmapTwoFACodeStore::new()));
+        let two_fa_code_store = Arc::new(tokio::sync::RwLock::new(RedisTwoFACodeStore::new(
+            redis_connection.clone(),
+        )));
         let email_client = Arc::new(tokio::sync::RwLock::new(MockEmailClient {}));
 
         let app_state = auth_service::app_state::AppState::new(

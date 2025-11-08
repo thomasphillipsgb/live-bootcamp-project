@@ -17,6 +17,6 @@
 
   REM Run docker-compose commands with loaded variables
   docker-compose build
-  docker-compose up
+  docker-compose up -d
 
   ECHO Finished!
