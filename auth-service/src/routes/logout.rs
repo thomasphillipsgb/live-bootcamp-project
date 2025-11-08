@@ -14,7 +14,7 @@ pub async fn logout_handler<T, U, V, W>(
 ) -> Result<(CookieJar, impl IntoResponse), AuthAPIError>
 where
     T: UserStore + Send + Sync,
-    U: BannedTokenStore,
+    U: BannedTokenStore + Send + Sync,
     V: TwoFACodeStore,
     W: EmailClient,
 {
@@ -29,6 +29,7 @@ where
     let mut banned_token_store = state.banned_token_store.write().await;
     banned_token_store
         .ban_token(&token)
+        .await
         .map_err(|_| AuthAPIError::UnexpectedError)?;
 
     Ok((jar, StatusCode::OK))

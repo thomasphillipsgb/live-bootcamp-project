@@ -2,6 +2,7 @@ pub mod hashmap_two_fa_code_store;
 pub mod hashmap_user_store;
 pub mod hashset_banned_store;
 pub mod postgres_user_store;
+pub mod redis_banned_token_store;
 pub use hashmap_two_fa_code_store::HashmapTwoFACodeStore;
 pub use hashmap_user_store::HashMapUserStore;
 
@@ -31,9 +32,17 @@ pub enum UserStoreError {
     UnexpectedError,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum BannedTokenStoreError {
+    UnexpectedError,
+}
+
 pub trait BannedTokenStore {
-    fn ban_token(&mut self, token: &str) -> Result<(), UserStoreError>;
-    fn is_token_banned(&self, token: &str) -> bool;
+    fn ban_token(
+        &mut self,
+        token: &str,
+    ) -> impl Future<Output = Result<(), BannedTokenStoreError>> + Send;
+    fn is_token_banned(&self, token: &str) -> impl Future<Output = bool> + Send;
 }
 
 pub trait TwoFACodeStore {
