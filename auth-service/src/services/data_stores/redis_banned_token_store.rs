@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use redis::{Commands, Connection};
+use redis::{AsyncCommands, Commands, Connection};
 use tokio::sync::RwLock;
 
 use crate::{
@@ -10,12 +10,12 @@ use crate::{
 
 #[derive(Clone)]
 pub struct RedisBannedTokenStore {
-    conn: Arc<RwLock<Connection>>,
+    connection_manager: redis::aio::MultiplexedConnection,
 }
 
 impl RedisBannedTokenStore {
-    pub fn new(conn: Arc<RwLock<Connection>>) -> Self {
-        Self { conn }
+    pub fn new(connection_manager: redis::aio::MultiplexedConnection) -> Self {
+        Self { connection_manager }
     }
 }
 
@@ -23,9 +23,10 @@ impl BannedTokenStore for RedisBannedTokenStore {
     async fn ban_token(&mut self, token: &str) -> Result<(), BannedTokenStoreError> {
         let key = get_key(token);
 
-        let mut conn = self.conn.write().await;
+        let mut conn = self.connection_manager.clone();
         let _: () = conn
             .set_ex(key, true, TOKEN_TTL_SECONDS)
+            .await
             .map_err(|_| BannedTokenStoreError::UnexpectedError)?;
         Ok(())
     }
@@ -33,8 +34,8 @@ impl BannedTokenStore for RedisBannedTokenStore {
     async fn is_token_banned(&self, token: &str) -> bool {
         let key = get_key(token);
 
-        let mut connection = self.conn.write().await;
-        let result: Result<bool, _> = connection.exists(key);
+        let mut conn = self.connection_manager.clone();
+        let result = conn.exists(key).await;
         match result {
             Ok(exists) => exists,
             Err(_) => false,

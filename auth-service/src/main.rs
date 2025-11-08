@@ -16,7 +16,7 @@ use tokio::sync::RwLock;
 #[tokio::main]
 async fn main() {
     let pg_pool = configure_postgresql().await;
-    let redis_connection = Arc::new(RwLock::new(configure_redis()));
+    let redis_connection = configure_redis().await;
 
     let banned_token_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(
         redis_connection.clone(),
@@ -54,9 +54,10 @@ async fn configure_postgresql() -> PgPool {
     pg_pool
 }
 
-fn configure_redis() -> redis::Connection {
+async fn configure_redis() -> redis::aio::MultiplexedConnection {
     get_redis_client(REDIS_HOST_NAME.to_owned())
         .expect("Failed to get Redis client")
-        .get_connection()
+        .get_multiplexed_async_connection()
+        .await
         .expect("Failed to get Redis connection")
 }

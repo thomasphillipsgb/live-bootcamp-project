@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use redis::{Commands, Connection};
+use redis::{aio::MultiplexedConnection, AsyncCommands, Commands, Connection};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
@@ -11,12 +11,12 @@ use crate::{
 
 #[derive(Clone)]
 pub struct RedisTwoFACodeStore {
-    conn: Arc<RwLock<Connection>>,
+    connection_manager: MultiplexedConnection,
 }
 
 impl RedisTwoFACodeStore {
-    pub fn new(conn: Arc<RwLock<Connection>>) -> Self {
-        Self { conn }
+    pub fn new(connection_manager: MultiplexedConnection) -> Self {
+        Self { connection_manager }
     }
 }
 
@@ -34,9 +34,10 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
         ))
         .map_err(|_| TwoFACodeStoreError::UnexpectedError)?;
 
-        let mut conn = self.conn.write().await;
+        let mut conn = self.connection_manager.clone();
         let _: () = conn
             .set_ex(key, value, TEN_MINUTES_IN_SECONDS)
+            .await
             .map_err(|_| TwoFACodeStoreError::UnexpectedError)?;
 
         Ok(())
@@ -44,9 +45,10 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
 
     async fn remove_code(&mut self, email: &Email) -> Result<(), TwoFACodeStoreError> {
         let key = get_key(email);
-        let mut conn = self.conn.write().await;
+        let mut conn = self.connection_manager.clone();
         let _: () = conn
             .del(key)
+            .await
             .map_err(|_| TwoFACodeStoreError::UnexpectedError)?;
 
         Ok(())
@@ -57,9 +59,10 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
         email: &Email,
     ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError> {
         let key = get_key(email);
-        let mut conn = self.conn.write().await;
+        let mut conn = self.connection_manager.clone();
         let value: String = conn
             .get(key)
+            .await
             .map_err(|_| TwoFACodeStoreError::LoginAttemptIdNotFound)?;
         let tuple: TwoFATuple =
             serde_json::from_str(&value).map_err(|_| TwoFACodeStoreError::UnexpectedError)?;
