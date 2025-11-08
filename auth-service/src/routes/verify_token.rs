@@ -21,7 +21,7 @@ pub async fn verify_token_handler<T, U, V, W>(
 ) -> impl IntoResponse
 where
     T: UserStore,
-    U: BannedTokenStore,
+    U: BannedTokenStore + Send + Sync,
     V: TwoFACodeStore,
     W: EmailClient,
 {

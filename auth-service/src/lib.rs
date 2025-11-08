@@ -12,12 +12,14 @@ use axum::{
     serve::Serve,
     Json, Router,
 };
+use redis::{Client, RedisResult};
 use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgPoolOptions;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
 use crate::{
     app_state::AppState,
-    domain::{models::Email, AuthAPIError, EmailClient},
+    domain::{AuthAPIError, EmailClient},
     routes::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
@@ -55,7 +57,6 @@ impl Application {
 
         let router = Router::new()
             .fallback_service(ServeDir::new("assets"))
-            .route("/hello", get(hello_handler))
             .route("/signup", post(signup_handler))
             .route("/login", post(login_handler))
             .route("/logout", post(logout_handler))
@@ -75,11 +76,6 @@ impl Application {
         println!("listening on {}", &self.address);
         self.server.await
     }
-}
-
-async fn hello_handler() -> Html<&'static str> {
-    println!("hello handler called");
-    Html("<h1>Hello, Rustaceans!</h1>")
 }
 
 #[derive(Serialize, Deserialize)]
@@ -108,6 +104,19 @@ impl IntoResponse for AuthAPIError {
         });
         (status, body).into_response()
     }
+}
+
+pub async fn get_postgres_pool(database_url: &str) -> Result<sqlx::PgPool, sqlx::Error> {
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(database_url)
+        .await?;
+    Ok(pool)
+}
+
+pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {
+    let redis_url = format!("redis://{}", redis_hostname);
+    Client::open(redis_url)
 }
 
 pub mod app_state {

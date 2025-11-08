@@ -26,8 +26,8 @@ async fn should_return_400_if_invalid_input() {
     let response = app
         .post_verify_2fa(&serde_json::json!({
             "email": "userm",
-            "login_attempt_id": "string",
-            "two_fa_code": "string"
+            "loginAttemptId": "string",
+            "2FACode": "string"
         }))
         .await;
 
@@ -60,8 +60,8 @@ async fn should_return_401_if_incorrect_credentials() {
     let response = app
         .post_verify_2fa(&serde_json::json!({
             "email": "ur@example.com",
-            "login_attempt_id": uuid::Uuid::new_v4().to_string(),
-            "two_fa_code": "123456"
+            "loginAttemptId": uuid::Uuid::new_v4().to_string(),
+            "2FACode": "123456"
         }))
         .await;
 
@@ -103,8 +103,8 @@ async fn should_return_401_if_old_code() {
     let response = app
         .post_verify_2fa(&serde_json::json!({
             "email": "user@example.com",
-            "login_attempt_id": uuid::Uuid::new_v4().to_string(),
-            "two_fa_code": "123456"
+            "loginAttemptId": uuid::Uuid::new_v4().to_string(),
+            "2FACode": "123456"
         }))
         .await;
     assert_eq!(response.status().as_u16(), 401);
@@ -148,8 +148,8 @@ async fn should_return_200_if_correct_code() {
     let response = app
         .post_verify_2fa(&serde_json::json!({
             "email": "user@example.com",
-            "login_attempt_id": login_response.login_attempt_id,
-            "two_fa_code": code.as_ref(),
+            "loginAttemptId": login_response.login_attempt_id,
+            "2FACode": code.as_ref(),
         }))
         .await;
 
@@ -200,8 +200,8 @@ async fn should_return_401_if_same_code_twice() {
     let response = app
         .post_verify_2fa(&serde_json::json!({
             "email": "user@example.com",
-            "login_attempt_id": login_response.login_attempt_id,
-            "two_fa_code": code.as_ref(),
+            "loginAttemptId": login_response.login_attempt_id,
+            "2FACode": code.as_ref(),
         }))
         .await;
     assert_eq!(response.status().as_u16(), 200);
@@ -209,8 +209,8 @@ async fn should_return_401_if_same_code_twice() {
     let response = app
         .post_verify_2fa(&serde_json::json!({
             "email": "user@example.com",
-            "login_attempt_id": login_response.login_attempt_id,
-            "two_fa_code": code.as_ref(),
+            "loginAttemptId": login_response.login_attempt_id,
+            "2FACode": code.as_ref(),
         }))
         .await;
     assert_eq!(response.status().as_u16(), 401);

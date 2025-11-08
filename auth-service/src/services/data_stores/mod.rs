@@ -1,3 +1,12 @@
+pub mod hashmap_two_fa_code_store;
+pub mod hashmap_user_store;
+pub mod hashset_banned_store;
+pub mod postgres_user_store;
+pub mod redis_banned_token_store;
+pub mod redis_two_fa_code_store;
+pub use hashmap_two_fa_code_store::HashmapTwoFACodeStore;
+pub use hashmap_user_store::HashMapUserStore;
+
 use std::future::Future;
 
 use rand::{Rng, RngCore};
@@ -24,9 +33,17 @@ pub enum UserStoreError {
     UnexpectedError,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum BannedTokenStoreError {
+    UnexpectedError,
+}
+
 pub trait BannedTokenStore {
-    fn ban_token(&mut self, token: &str) -> Result<(), UserStoreError>;
-    fn is_token_banned(&self, token: &str) -> bool;
+    fn ban_token(
+        &mut self,
+        token: &str,
+    ) -> impl Future<Output = Result<(), BannedTokenStoreError>> + Send;
+    fn is_token_banned(&self, token: &str) -> impl Future<Output = bool> + Send;
 }
 
 pub trait TwoFACodeStore {
@@ -95,7 +112,7 @@ impl Default for TwoFACode {
     fn default() -> Self {
         // Use the `rand` crate to generate a random 2FA code.
         // The code should be 6 digits (ex: 834629)
-        let code = rand::rng().random_range(100000..999999).to_string();
+        let code = rand::thread_rng().gen_range(100000..999999).to_string();
         TwoFACode(code)
     }
 }

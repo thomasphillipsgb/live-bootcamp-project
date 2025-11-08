@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use crate::services::{data_stores::BannedTokenStore, UserStoreError};
+use crate::services::{
+    data_stores::{BannedTokenStore, BannedTokenStoreError},
+    UserStoreError,
+};
 
 #[derive(Clone)]
 pub struct HashsetBannedTokenStore {
@@ -15,12 +18,12 @@ impl HashsetBannedTokenStore {
     }
 }
 impl BannedTokenStore for HashsetBannedTokenStore {
-    fn ban_token(&mut self, token: &str) -> Result<(), UserStoreError> {
+    async fn ban_token(&mut self, token: &str) -> Result<(), BannedTokenStoreError> {
         self.banned_tokens.insert(token.to_string());
         Ok(())
     }
 
-    fn is_token_banned(&self, token: &str) -> bool {
+    async fn is_token_banned(&self, token: &str) -> bool {
         self.banned_tokens.contains(token)
     }
 }
@@ -29,8 +32,8 @@ impl BannedTokenStore for HashsetBannedTokenStore {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_ban_and_check_token() {
+    #[tokio::test]
+    async fn test_ban_and_check_token() {
         let mut store = HashsetBannedTokenStore {
             banned_tokens: std::collections::HashSet::new(),
         };
@@ -38,12 +41,12 @@ mod tests {
         let token = "sample_token";
 
         // Initially, the token should not be banned
-        assert_eq!(store.is_token_banned(token), false);
+        assert_eq!(store.is_token_banned(token).await, false);
 
         // Ban the token
-        store.ban_token(token).unwrap();
+        store.ban_token(token).await.unwrap();
 
         // Now, the token should be banned
-        assert_eq!(store.is_token_banned(token), true);
+        assert_eq!(store.is_token_banned(token).await, true);
     }
 }

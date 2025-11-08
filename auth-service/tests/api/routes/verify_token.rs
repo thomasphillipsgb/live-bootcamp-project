@@ -1,4 +1,6 @@
-use auth_service::{domain::models::Email, utils::auth::generate_auth_cookie};
+use auth_service::{
+    domain::models::Email, services::BannedTokenStore, utils::auth::generate_auth_cookie,
+};
 use reqwest::Url;
 
 use crate::helpers::TestApp;
@@ -16,8 +18,9 @@ async fn should_return_422_if_malformed_input() {
 async fn should_return_200_valid_token() {
     let app = TestApp::new().await;
 
-    let cookie =
-        generate_auth_cookie(&Email::new("email@example.com".to_string()).unwrap()).unwrap();
+    let random_email = "user".to_string() + &uuid::Uuid::new_v4().to_string() + "@example.com";
+
+    let cookie = generate_auth_cookie(&Email::new(random_email).unwrap()).unwrap();
 
     // add valid cookie
     app.cookie_jar.add_cookie_str(
@@ -55,10 +58,11 @@ async fn should_return_401_if_banned_token() {
     let token = cookie.value().to_owned();
 
     {
-        app.banned_token_store
-            .write()
-            .await
+        let mut token_store = app.banned_token_store.write().await;
+
+        token_store
             .ban_token(&token)
+            .await
             .expect("Failed to ban token");
     }
 

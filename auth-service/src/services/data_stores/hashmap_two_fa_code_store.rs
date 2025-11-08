@@ -56,10 +56,7 @@ impl TwoFACodeStore for HashmapTwoFACodeStore {
 mod tests {
     use crate::{
         domain::models::Email,
-        services::{
-            data_stores::{LoginAttemptId, TwoFACode, TwoFACodeStore},
-            hashmap_two_fa_code_store::HashmapTwoFACodeStore,
-        },
+        services::data_stores::{HashmapTwoFACodeStore, LoginAttemptId, TwoFACode, TwoFACodeStore},
     };
 
     #[tokio::test]

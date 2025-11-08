@@ -31,12 +31,13 @@ pub enum GenerateTokenError {
 }
 
 // This value determines how long the JWT auth token is valid for
-pub const TOKEN_TTL_SECONDS: i64 = 600; // 10 minutes
+const TOKEN_TTL_MINS: i64 = 10; // 10 minutes
+pub const TOKEN_TTL_SECONDS: u64 = 600; // 10 minutes
 
 // Create JWT auth token
 fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
-    let delta = chrono::Duration::try_seconds(TOKEN_TTL_SECONDS)
-        .ok_or(GenerateTokenError::UnexpectedError)?;
+    let delta =
+        chrono::Duration::try_minutes(TOKEN_TTL_MINS).ok_or(GenerateTokenError::UnexpectedError)?;
 
     // Create JWT expiration time
     let exp = Utc::now()
@@ -62,9 +63,9 @@ pub async fn validate_token<T>(
     banned_token_store: &T,
 ) -> Result<Claims, jsonwebtoken::errors::Error>
 where
-    T: BannedTokenStore,
+    T: BannedTokenStore + Send + Sync,
 {
-    if banned_token_store.is_token_banned(token) {
+    if banned_token_store.is_token_banned(token).await {
         return Err(jsonwebtoken::errors::Error::from(
             jsonwebtoken::errors::ErrorKind::InvalidToken,
         ));
@@ -95,7 +96,7 @@ pub struct Claims {
 
 #[cfg(test)]
 mod tests {
-    use crate::services::hashset_banned_store::HashsetBannedTokenStore;
+    use crate::services::data_stores::hashset_banned_store::HashsetBannedTokenStore;
 
     use super::*;
 
@@ -159,7 +160,7 @@ mod tests {
         let token = generate_auth_token(&email).unwrap();
 
         let mut banned_token_store = HashsetBannedTokenStore::new();
-        banned_token_store.ban_token(&token);
+        banned_token_store.ban_token(&token).await;
 
         let result = validate_token(&token, &banned_token_store).await;
         assert!(result.is_err());
