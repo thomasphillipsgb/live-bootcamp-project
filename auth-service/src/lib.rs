@@ -16,6 +16,7 @@ use redis::{Client, RedisResult};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{cors::CorsLayer, services::ServeDir};
+use tracing::info;
 
 use crate::{
     app_state::AppState,
@@ -73,7 +74,7 @@ impl Application {
     }
 
     pub async fn run(self) -> Result<(), std::io::Error> {
-        println!("listening on {}", &self.address);
+        info!("listening on {}", &self.address);
         self.server.await
     }
 }
@@ -107,6 +108,7 @@ impl IntoResponse for AuthAPIError {
 }
 
 pub async fn get_postgres_pool(database_url: &str) -> Result<sqlx::PgPool, sqlx::Error> {
+    println!("Connecting to Postgres at {}", database_url);
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(database_url)
