@@ -15,6 +15,7 @@ use crate::{
     services::{BannedTokenStore, TwoFACodeStore, UserStore, UserStoreError},
 };
 
+#[tracing::instrument(name = "Signup", skip_all, err(Debug))]
 pub async fn signup_handler<T, U, V, W>(
     State(app_state): State<AppState<T, U, V, W>>,
     Json(request): Json<SignupRequest>,
