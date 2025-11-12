@@ -1,3 +1,4 @@
+use color_eyre::eyre::{eyre, Result};
 use std::{error::Error, future::Future};
 
 use argon2::{
@@ -33,13 +34,13 @@ impl UserStore for PostgresUserStore {
             .pool
             .acquire()
             .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
+            .map_err(|e| UserStoreError::UnexpectedError(e.into()))?;
 
         let executor = &mut *connection;
 
         let password_hash = compute_password_hash(value.password.as_ref().to_string())
             .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
+            .map_err(|e| UserStoreError::UnexpectedError(e.into()))?;
 
         let result = sqlx::query!(
             r#"
@@ -58,7 +59,7 @@ impl UserStore for PostgresUserStore {
             Err(sqlx::Error::Database(db_err)) if db_err.code() == Some("23505".into()) => {
                 Err(UserStoreError::UserAlreadyExists)
             }
-            Err(_) => Err(UserStoreError::UnexpectedError),
+            Err(e) => Err(UserStoreError::UnexpectedError(e.into())),
         }
     }
 
@@ -68,7 +69,7 @@ impl UserStore for PostgresUserStore {
             .pool
             .acquire()
             .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
+            .map_err(|e| UserStoreError::UnexpectedError(e.into()))?;
 
         let executor = &mut *connection;
 
@@ -111,7 +112,7 @@ impl UserStore for PostgresUserStore {
 async fn verify_password_hash(
     expected_password_hash: String,
     password_candidate: String,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     tokio::task::spawn_blocking(move || {
         let expected_password_hash: PasswordHash<'_> = PasswordHash::new(&expected_password_hash)?;
 
@@ -123,7 +124,7 @@ async fn verify_password_hash(
 }
 
 #[tracing::instrument(name = "Computing password hash", skip_all)]
-async fn compute_password_hash(password: String) -> Result<String, Box<dyn Error>> {
+async fn compute_password_hash(password: String) -> Result<String> {
     let salt: SaltString = SaltString::generate(&mut rand::thread_rng());
     let hasher = Argon2::new(
         Algorithm::Argon2id,

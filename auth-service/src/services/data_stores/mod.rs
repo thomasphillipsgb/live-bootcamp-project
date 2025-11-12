@@ -4,8 +4,10 @@ pub mod hashset_banned_store;
 pub mod postgres_user_store;
 pub mod redis_banned_token_store;
 pub mod redis_two_fa_code_store;
+use color_eyre::eyre::Report;
 pub use hashmap_two_fa_code_store::HashmapTwoFACodeStore;
 pub use hashmap_user_store::HashMapUserStore;
+use thiserror::Error;
 
 use std::future::Future;
 
@@ -25,12 +27,28 @@ pub trait UserStore {
     ) -> impl Future<Output = Result<(), UserStoreError>> + Send;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum UserStoreError {
+    #[error("User already exists")]
     UserAlreadyExists,
+    #[error("User not found")]
     UserNotFound,
+    #[error("Invalid credentials")]
     InvalidCredentials,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+}
+
+impl PartialEq for UserStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::UserAlreadyExists, Self::UserAlreadyExists)
+                | (Self::UserNotFound, Self::UserNotFound)
+                | (Self::InvalidCredentials, Self::InvalidCredentials)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
 }
 
 #[derive(Debug, PartialEq)]
