@@ -15,7 +15,7 @@ use axum::{
 use redis::{Client, RedisResult};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
-use tower_http::{cors::CorsLayer, services::ServeDir};
+use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing::info;
 
 use crate::{
@@ -25,6 +25,7 @@ use crate::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
     services::{BannedTokenStore, TwoFACodeStore, UserStore},
+    utils::tracing::{make_span_with_request_id, on_request, on_response},
 };
 
 pub struct Application {
@@ -64,7 +65,13 @@ impl Application {
             .route("/verify-2fa", post(verify_2fa_handler))
             .route("/verify-token", post(verify_token_handler))
             .with_state(app_state)
-            .layer(cors);
+            .layer(cors)
+            .layer(
+                TraceLayer::new_for_http()
+                    .make_span_with(make_span_with_request_id)
+                    .on_request(on_request)
+                    .on_response(on_response),
+            );
 
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
