@@ -1,6 +1,7 @@
 use axum::{extract::State, http, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 use color_eyre::eyre::eyre;
+use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -17,7 +18,7 @@ use crate::{
 #[derive(serde::Deserialize)]
 pub struct LoginRequest {
     pub email: String,
-    pub password: String,
+    pub password: SecretString,
 }
 
 #[instrument(skip_all)]
@@ -35,7 +36,7 @@ where
     let email = request.email;
     let password = request.password;
 
-    let (email, password) = match (Email::new(email), Password::new(password)) {
+    let (email, password) = match (Email::new(email.into()), Password::new(password)) {
         (Ok(email), Ok(password)) => (email, password),
         _ => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };

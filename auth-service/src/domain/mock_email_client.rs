@@ -1,5 +1,6 @@
 use crate::domain::{models::Email, EmailClient};
 use color_eyre::eyre::Result;
+use secrecy::ExposeSecret;
 use tracing::debug;
 
 #[derive(Clone)]
@@ -10,7 +11,7 @@ impl EmailClient for MockEmailClient {
         // Our mock email client will simply log the recipient, subject, and content to standard output
         debug!(
             "Sending email to {} with subject: {} and content: {}",
-            recipient.as_ref(),
+            recipient.as_ref().expose_secret(),
             subject,
             content
         );

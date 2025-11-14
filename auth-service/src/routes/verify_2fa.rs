@@ -2,6 +2,7 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 use color_eyre::eyre::Context;
 use color_eyre::eyre::Result;
+use secrecy::SecretString;
 use tracing::instrument;
 
 use crate::{
@@ -63,7 +64,7 @@ where
 
 #[derive(serde::Deserialize)]
 pub struct Verify2FARequest {
-    pub email: String,
+    pub email: SecretString,
     #[serde(rename = "loginAttemptId")]
     pub login_attempt_id: String,
     #[serde(rename = "2FACode")]

@@ -9,6 +9,7 @@ use color_eyre::eyre::Report;
 use color_eyre::eyre::Result;
 pub use hashmap_two_fa_code_store::HashmapTwoFACodeStore;
 pub use hashmap_user_store::HashMapUserStore;
+use secrecy::SecretString;
 use thiserror::Error;
 
 use std::future::Future;
@@ -25,7 +26,7 @@ pub trait UserStore {
     fn validate(
         &self,
         key: &Email,
-        value: &str,
+        value: &SecretString,
     ) -> impl Future<Output = Result<(), UserStoreError>> + Send;
 }
 

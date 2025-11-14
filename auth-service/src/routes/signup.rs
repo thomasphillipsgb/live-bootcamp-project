@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use secrecy::SecretString;
 use serde::Serialize;
 
 use crate::{
@@ -62,8 +63,8 @@ pub struct SignupResponse {
 
 #[derive(serde::Deserialize)]
 pub struct SignupRequest {
-    pub email: String,
-    pub password: String,
+    pub email: SecretString,
+    pub password: SecretString,
     #[serde(rename = "requires2FA")]
     pub requires_2fa: bool,
 }

@@ -14,6 +14,7 @@ use auth_service::{
     utils::constants::{test, DATABASE_URL, REDIS_HOST_NAME},
     Application,
 };
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     Connection, Executor, PgConnection, PgPool,
@@ -166,19 +167,20 @@ async fn configure_postgresql() -> (PgPool, String) {
 
     configure_database(&postgresql_conn_url, &db_name).await;
 
-    let postgresql_conn_url_with_db = format!("{}/{}", postgresql_conn_url, db_name);
+    let postgresql_conn_url_with_db =
+        format!("{}/{}", postgresql_conn_url.expose_secret(), db_name);
 
     // Create a new connection pool and return it
     (
-        get_postgres_pool(&postgresql_conn_url_with_db)
+        get_postgres_pool(&postgresql_conn_url_with_db.into())
             .await
             .expect("Failed to create Postgres connection pool!"),
         db_name,
     )
 }
 
-async fn configure_database(db_conn_string: &str, db_name: &str) {
-    // Create database connection
+async fn configure_database(db_conn_string: &SecretString, db_name: &str) {
+    let db_conn_string = db_conn_string.expose_secret();
     let connection = PgPoolOptions::new()
         .connect(db_conn_string)
         .await
@@ -206,9 +208,9 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
 }
 
 async fn delete_database(db_name: &str) {
-    let postgresql_conn_url: String = DATABASE_URL.to_owned();
+    let postgresql_conn_url = DATABASE_URL.to_owned();
 
-    let connection_options = PgConnectOptions::from_str(&postgresql_conn_url)
+    let connection_options = PgConnectOptions::from_str(&postgresql_conn_url.expose_secret())
         .expect("Failed to parse PostgreSQL connection string");
 
     let mut connection = PgConnection::connect_with(&connection_options)

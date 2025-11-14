@@ -13,8 +13,9 @@ use axum::{
     Json, Router,
 };
 use redis::{Client, RedisResult};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPoolOptions;
+use sqlx::{database, postgres::PgPoolOptions};
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing::info;
 
@@ -129,7 +130,8 @@ fn log_error_chain(e: &(dyn Error + 'static)) {
     tracing::error!("{}", report);
 }
 
-pub async fn get_postgres_pool(database_url: &str) -> Result<sqlx::PgPool, sqlx::Error> {
+pub async fn get_postgres_pool(database_url: &SecretString) -> Result<sqlx::PgPool, sqlx::Error> {
+    let database_url = database_url.expose_secret();
     println!("Connecting to Postgres at {}", database_url);
     let pool = PgPoolOptions::new()
         .max_connections(5)
