@@ -2,6 +2,7 @@ use std::ops::Deref;
 
 use axum::{extract::State, http, response::IntoResponse, Json};
 use serde_json::json;
+use tracing::instrument;
 
 use crate::{
     app_state::AppState,
@@ -15,6 +16,7 @@ pub struct VerifyTokenRequest {
     pub token: String,
 }
 
+#[instrument(skip_all)]
 pub async fn verify_token_handler<T, U, V, W>(
     State(app_state): State<AppState<T, U, V, W>>,
     Json(payload): Json<VerifyTokenRequest>,

@@ -1,5 +1,7 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::{cookie::Cookie, CookieJar};
+use color_eyre::eyre::Context;
+use tracing::instrument;
 
 use crate::{
     app_state::AppState,
@@ -8,6 +10,7 @@ use crate::{
     utils::{auth::validate_token, constants::JWT_COOKIE_NAME},
 };
 
+#[instrument(skip_all)]
 pub async fn logout_handler<T, U, V, W>(
     jar: CookieJar,
     state: State<AppState<T, U, V, W>>,
@@ -30,7 +33,8 @@ where
     banned_token_store
         .ban_token(&token)
         .await
-        .map_err(|_| AuthAPIError::UnexpectedError)?;
+        .wrap_err("Failed to ban token")
+        .map_err(AuthAPIError::UnexpectedError)?;
 
     Ok((jar, StatusCode::OK))
 }

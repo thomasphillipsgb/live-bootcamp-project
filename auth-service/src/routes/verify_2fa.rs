@@ -1,5 +1,8 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
+use color_eyre::eyre::Context;
+use color_eyre::eyre::Result;
+use tracing::instrument;
 
 use crate::{
     app_state::AppState,
@@ -8,6 +11,7 @@ use crate::{
     utils::auth::generate_auth_cookie,
 };
 
+#[instrument(skip_all)]
 pub async fn verify_2fa_handler<T, U, V, W>(
     jar: CookieJar,
     State(state): State<AppState<T, U, V, W>>,
@@ -31,18 +35,25 @@ where
             // return a `AuthAPIError::IncorrectCredentials`.
             let code_tuple = two_fa_code_store.get_code(&email).await;
             match code_tuple {
-                Err(_) => (jar, Err(AuthAPIError::IncorrectCredentials)),
+                Err(_) => (jar, Err(AuthAPIError::IncorrectCredentials.into())),
                 Ok((attempt, code)) => {
                     if attempt != login_attempt_id || code.as_ref() != _two_fa_code.as_ref() {
-                        return (jar, Err(AuthAPIError::IncorrectCredentials));
+                        return (jar, Err(AuthAPIError::IncorrectCredentials.into()));
                     }
 
-                    let auth_cookie = generate_auth_cookie(&email);
-                    let jar = jar.add(auth_cookie.unwrap());
+                    match generate_auth_cookie(&email).map_err(AuthAPIError::UnexpectedError) {
+                        Err(e) => return (jar, Err(e.into())),
+                        Ok(auth_cookie) => {
+                            let jar = jar.add(auth_cookie);
 
-                    two_fa_code_store.remove_code(&email).await.unwrap();
-
-                    (jar, Ok(StatusCode::OK.into_response()))
+                            return match two_fa_code_store.remove_code(&email).await {
+                                Err(e) => {
+                                    (jar, Err(AuthAPIError::UnexpectedError(e.into()).into()))
+                                }
+                                Ok(_) => (jar, Ok(StatusCode::OK.into_response())),
+                            };
+                        }
+                    }
                 }
             }
         }
