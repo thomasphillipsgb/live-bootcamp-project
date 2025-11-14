@@ -4,7 +4,9 @@ pub mod hashset_banned_store;
 pub mod postgres_user_store;
 pub mod redis_banned_token_store;
 pub mod redis_two_fa_code_store;
+use color_eyre::eyre::eyre;
 use color_eyre::eyre::Report;
+use color_eyre::eyre::Result;
 pub use hashmap_two_fa_code_store::HashmapTwoFACodeStore;
 pub use hashmap_user_store::HashMapUserStore;
 use thiserror::Error;
@@ -51,9 +53,10 @@ impl PartialEq for UserStoreError {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum BannedTokenStoreError {
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
 }
 
 pub trait BannedTokenStore {
@@ -81,21 +84,33 @@ pub trait TwoFACodeStore {
     ) -> impl Future<Output = Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>> + Send;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum TwoFACodeStoreError {
+    #[error("Login attempt ID not found")]
     LoginAttemptIdNotFound,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+}
+
+impl PartialEq for TwoFACodeStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::LoginAttemptIdNotFound, Self::LoginAttemptIdNotFound)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoginAttemptId(String);
 
 impl LoginAttemptId {
-    pub fn new(id: String) -> Result<Self, String> {
+    pub fn new(id: String) -> Result<Self> {
         if let Ok(_) = uuid::Uuid::parse_str(&id) {
             Ok(LoginAttemptId(id))
         } else {
-            Err("Invalid UUID format".to_string())
+            Err(eyre!("Invalid UUID format"))
         }
     }
 }
@@ -116,12 +131,12 @@ impl AsRef<str> for LoginAttemptId {
 pub struct TwoFACode(String);
 
 impl TwoFACode {
-    pub fn new(code: String) -> Result<Self, String> {
+    pub fn new(code: String) -> Result<Self> {
         // Ensure `code` is a valid 6-digit code
         if code.len() == 6 && code.chars().all(char::is_numeric) {
             Ok(TwoFACode(code))
         } else {
-            Err("Invalid 2FA code".to_string())
+            Err(eyre!("Invalid 2FA code"))
         }
     }
 }

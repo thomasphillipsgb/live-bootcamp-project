@@ -8,17 +8,19 @@ pub use error::*;
 pub use user::*;
 
 pub mod models {
+    use color_eyre::eyre::eyre;
+    use color_eyre::eyre::Result;
     use validator::ValidateEmail;
 
     #[derive(Clone, Eq, Hash, PartialEq)]
     pub struct Email(String);
 
     impl Email {
-        pub fn new(email: String) -> Result<Self, String> {
+        pub fn new(email: String) -> Result<Self> {
             if email.validate_email() {
                 Ok(Self(email))
             } else {
-                Err("Invalid email format".to_string())
+                Err(eyre!("Invalid email format"))
             }
         }
     }
@@ -33,9 +35,9 @@ pub mod models {
     pub struct Password(String);
 
     impl Password {
-        pub fn new(password: String) -> Result<Self, ()> {
+        pub fn new(password: String) -> Result<Self> {
             if password.trim().is_empty() || password.len() < 8 {
-                return Err(());
+                return Err(eyre!("Invalid password"));
             }
             // Add password validation logic if needed
             Ok(Self(password))
