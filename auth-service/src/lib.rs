@@ -132,7 +132,7 @@ fn log_error_chain(e: &(dyn Error + 'static)) {
 
 pub async fn get_postgres_pool(database_url: &SecretString) -> Result<sqlx::PgPool, sqlx::Error> {
     let database_url = database_url.expose_secret();
-    println!("Connecting to Postgres at {}", database_url);
+    tracing::info!("Connecting to Postgres...");
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(database_url)
