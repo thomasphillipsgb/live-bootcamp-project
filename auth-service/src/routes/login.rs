@@ -109,13 +109,10 @@ async fn handle_no_2fa(
     CookieJar,
     Result<(http::StatusCode, Json<LoginResponse>), AuthAPIError>,
 ) {
-    let auth_cookie = match generate_auth_cookie(&email) {
-        Ok(cookie) => Some(cookie),
+    let jar = match generate_auth_cookie(&email) {
+        Ok(cookie) => jar.add(cookie),
         Err(e) => return (jar, Err(AuthAPIError::UnexpectedError(e))),
     };
-
-    let jar = jar.add(auth_cookie.unwrap());
-
     (
         jar,
         Ok((http::StatusCode::OK, Json(LoginResponse::RegularAuth))),
