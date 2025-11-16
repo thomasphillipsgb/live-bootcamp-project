@@ -36,9 +36,12 @@ thiserror = "2.0.17"
 color-eyre = "0.6.5"
 tracing-error = "0.2.1"
 secrecy = { version = "0.10.3", features = ["serde"] }
+resend-rs = { version = "0.19.0", features = ["rustls-tls"] }
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = [
     "json",
     "cookies",
 ], default-features = false }
+fake = "4.0"
+wiremock = "0.6.5"

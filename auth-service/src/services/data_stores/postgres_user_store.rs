@@ -108,7 +108,6 @@ impl UserStore for PostgresUserStore {
         .await
         .map_err(|_| UserStoreError::InvalidCredentials)
     }
-    // TODO: Implement all required methods. Note that you will need to make SQL queries against our PostgreSQL instance inside these methods.
 }
 
 #[tracing::instrument(name = "Verify password hash", skip_all)]

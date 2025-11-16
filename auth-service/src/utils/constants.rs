@@ -9,8 +9,18 @@ pub const DEFAULT_REDIS_HOSTNAME: &str = "127.0.0.1";
 // Define a lazily evaluated static. lazy_static is needed because std_env::var is not a const function.
 lazy_static! {
     pub static ref JWT_SECRET: SecretString = set_token();
+    pub static ref RESEND_SECRET: SecretString = set_resend_secret();
     pub static ref DATABASE_URL: SecretString = set_url();
     pub static ref REDIS_HOST_NAME: String = set_redis_host();
+}
+
+fn set_resend_secret() -> SecretString {
+    dotenv().ok(); // Load environment variables
+    let secret = std_env::var(env::RESEND_SECRET_ENV_VAR).expect("RESEND_API_KEY must be set.");
+    if secret.is_empty() {
+        panic!("RESEND_API_KEY must not be empty.");
+    }
+    secret.into()
 }
 
 fn set_url() -> SecretString {
@@ -38,6 +48,7 @@ fn set_redis_host() -> String {
 
 pub mod env {
     pub const JWT_SECRET_ENV_VAR: &str = "JWT_SECRET";
+    pub const RESEND_SECRET_ENV_VAR: &str = "RESEND_API_KEY";
     pub const DATABASE_URL_ENV_VAR: &str = "DATABASE_URL";
     pub const REDIS_HOST_NAME_ENV_VAR: &str = "REDIS_HOST_NAME";
 }

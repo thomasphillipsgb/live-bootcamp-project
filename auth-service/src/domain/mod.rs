@@ -1,6 +1,7 @@
 pub mod email_client;
 pub mod error;
 pub mod mock_email_client;
+pub mod resend_email_client;
 pub mod user;
 
 pub use email_client::*;
