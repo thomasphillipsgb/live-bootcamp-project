@@ -36,21 +36,19 @@ where
             // return a `AuthAPIError::IncorrectCredentials`.
             let code_tuple = two_fa_code_store.get_code(&email).await;
             match code_tuple {
-                Err(_) => (jar, Err(AuthAPIError::IncorrectCredentials.into())),
+                Err(_) => (jar, Err(AuthAPIError::IncorrectCredentials)),
                 Ok((attempt, code)) => {
                     if attempt != login_attempt_id || code.as_ref() != _two_fa_code.as_ref() {
-                        return (jar, Err(AuthAPIError::IncorrectCredentials.into()));
+                        return (jar, Err(AuthAPIError::IncorrectCredentials));
                     }
 
                     match generate_auth_cookie(&email).map_err(AuthAPIError::UnexpectedError) {
-                        Err(e) => return (jar, Err(e.into())),
+                        Err(e) => return (jar, Err(e)),
                         Ok(auth_cookie) => {
                             let jar = jar.add(auth_cookie);
 
                             return match two_fa_code_store.remove_code(&email).await {
-                                Err(e) => {
-                                    (jar, Err(AuthAPIError::UnexpectedError(e.into()).into()))
-                                }
+                                Err(e) => (jar, Err(AuthAPIError::UnexpectedError(e.into()))),
                                 Ok(_) => (jar, Ok(StatusCode::OK.into_response())),
                             };
                         }
