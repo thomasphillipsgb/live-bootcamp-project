@@ -51,7 +51,7 @@ fn generate_auth_token(email: &Email) -> Result<String> {
     // Cast exp to a usize, which is what Claims expects
     let exp: usize = exp.try_into().wrap_err(format!(
         "Failed to set exp time to usize, exp time: {}",
-        delta
+        exp
     ))?;
 
     let sub = email.as_ref().to_owned().expose_secret().into();
