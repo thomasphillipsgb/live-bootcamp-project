@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use secrecy::SecretString;
 use serde::Serialize;
 
 use crate::{
@@ -15,6 +16,7 @@ use crate::{
     services::{BannedTokenStore, TwoFACodeStore, UserStore, UserStoreError},
 };
 
+#[tracing::instrument(name = "Signup", skip_all)]
 pub async fn signup_handler<T, U, V, W>(
     State(app_state): State<AppState<T, U, V, W>>,
     Json(request): Json<SignupRequest>,
@@ -48,7 +50,7 @@ where
             if let UserStoreError::UserAlreadyExists = e {
                 Err(AuthAPIError::UserAlreadyExists)
             } else {
-                Err(AuthAPIError::UnexpectedError)
+                Err(AuthAPIError::UnexpectedError(e.into()))
             }
         }
     }
@@ -61,8 +63,8 @@ pub struct SignupResponse {
 
 #[derive(serde::Deserialize)]
 pub struct SignupRequest {
-    pub email: String,
-    pub password: String,
+    pub email: SecretString,
+    pub password: SecretString,
     #[serde(rename = "requires2FA")]
     pub requires_2fa: bool,
 }

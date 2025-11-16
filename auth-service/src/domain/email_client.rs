@@ -1,3 +1,4 @@
+use color_eyre::eyre::Result;
 use std::future::Future;
 
 use super::models::Email;
@@ -9,5 +10,5 @@ pub trait EmailClient {
         recipient: &Email,
         subject: &str,
         content: &str,
-    ) -> impl Future<Output = Result<(), String>> + Send;
+    ) -> impl Future<Output = Result<()>> + Send;
 }

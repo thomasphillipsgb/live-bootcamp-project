@@ -62,7 +62,7 @@ mod tests {
     #[tokio::test]
     async fn test_add_and_get_code() {
         let mut store = HashmapTwoFACodeStore::default();
-        let email = Email::new("test@example.com".to_string()).unwrap();
+        let email = Email::new("test@example.com".into()).unwrap();
         let login_attempt_id =
             LoginAttemptId::new("550e8400-e29b-41d4-a716-446655440000".to_string()).unwrap();
         let code = TwoFACode::new("123456".to_string()).unwrap();
@@ -80,7 +80,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove_code() {
         let mut store = HashmapTwoFACodeStore::default();
-        let email = Email::new("test@example.com".to_string()).unwrap();
+        let email = Email::new("test@example.com".into()).unwrap();
         let login_attempt_id =
             LoginAttemptId::new("550e8400-e29b-41d4-a716-446655440000".to_string()).unwrap();
         let code = TwoFACode::new("123456".to_string()).unwrap();

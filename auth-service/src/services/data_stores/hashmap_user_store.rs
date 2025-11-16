@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use secrecy::{ExposeSecret, SecretString};
+
 use crate::{
     domain::{models::Email, User},
     services::{UserStore, UserStoreError},
@@ -28,9 +30,9 @@ impl UserStore for HashMapUserStore {
         }
     }
 
-    async fn validate(&self, key: &Email, password: &str) -> Result<(), UserStoreError> {
+    async fn validate(&self, key: &Email, password: &SecretString) -> Result<(), UserStoreError> {
         if let Some(user) = self.users.get(key) {
-            if user.password.as_ref() == password {
+            if user.password.as_ref().expose_secret() == password.expose_secret() {
                 Ok(())
             } else {
                 Err(UserStoreError::InvalidCredentials)
@@ -97,13 +99,16 @@ mod tests {
         );
         store.insert(user).await.unwrap();
         assert!(store
-            .validate(&Email::new("test@example.com".into()).unwrap(), "password")
+            .validate(
+                &Email::new("test@example.com".into()).unwrap(),
+                &"password".into()
+            )
             .await
             .is_ok());
         assert!(store
             .validate(
                 &Email::new("test@example.com".into()).unwrap(),
-                "wrong_password"
+                &"wrong_password".into()
             )
             .await
             .is_err());

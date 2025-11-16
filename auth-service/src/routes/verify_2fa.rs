@@ -1,5 +1,9 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
+use color_eyre::eyre::Context;
+use color_eyre::eyre::Result;
+use secrecy::SecretString;
+use tracing::instrument;
 
 use crate::{
     app_state::AppState,
@@ -8,6 +12,7 @@ use crate::{
     utils::auth::generate_auth_cookie,
 };
 
+#[instrument(skip_all)]
 pub async fn verify_2fa_handler<T, U, V, W>(
     jar: CookieJar,
     State(state): State<AppState<T, U, V, W>>,
@@ -37,12 +42,17 @@ where
                         return (jar, Err(AuthAPIError::IncorrectCredentials));
                     }
 
-                    let auth_cookie = generate_auth_cookie(&email);
-                    let jar = jar.add(auth_cookie.unwrap());
+                    match generate_auth_cookie(&email).map_err(AuthAPIError::UnexpectedError) {
+                        Err(e) => return (jar, Err(e)),
+                        Ok(auth_cookie) => {
+                            let jar = jar.add(auth_cookie);
 
-                    two_fa_code_store.remove_code(&email).await.unwrap();
-
-                    (jar, Ok(StatusCode::OK.into_response()))
+                            return match two_fa_code_store.remove_code(&email).await {
+                                Err(e) => (jar, Err(AuthAPIError::UnexpectedError(e.into()))),
+                                Ok(_) => (jar, Ok(StatusCode::OK.into_response())),
+                            };
+                        }
+                    }
                 }
             }
         }
@@ -52,7 +62,7 @@ where
 
 #[derive(serde::Deserialize)]
 pub struct Verify2FARequest {
-    pub email: String,
+    pub email: SecretString,
     #[serde(rename = "loginAttemptId")]
     pub login_attempt_id: String,
     #[serde(rename = "2FACode")]

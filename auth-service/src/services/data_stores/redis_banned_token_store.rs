@@ -1,4 +1,6 @@
+use color_eyre::eyre::Context;
 use redis::AsyncCommands;
+use tracing::instrument;
 
 use crate::{
     services::{data_stores::BannedTokenStoreError, BannedTokenStore},
@@ -17,6 +19,7 @@ impl RedisBannedTokenStore {
 }
 
 impl BannedTokenStore for RedisBannedTokenStore {
+    #[instrument(skip_all)]
     async fn ban_token(&mut self, token: &str) -> Result<(), BannedTokenStoreError> {
         let key = get_key(token);
 
@@ -24,10 +27,12 @@ impl BannedTokenStore for RedisBannedTokenStore {
         let _: () = conn
             .set_ex(key, true, TOKEN_TTL_SECONDS)
             .await
-            .map_err(|_| BannedTokenStoreError::UnexpectedError)?;
+            .wrap_err("Failed to set banned token store in Redis")
+            .map_err(BannedTokenStoreError::UnexpectedError)?;
         Ok(())
     }
 
+    #[instrument(skip_all)]
     async fn is_token_banned(&self, token: &str) -> bool {
         let key = get_key(token);
 
@@ -43,6 +48,7 @@ impl BannedTokenStore for RedisBannedTokenStore {
 // We are using a key prefix to prevent collisions and organize data!
 const BANNED_TOKEN_KEY_PREFIX: &str = "banned_token:";
 
+#[instrument(skip_all)]
 fn get_key(token: &str) -> String {
     format!("{}{}", BANNED_TOKEN_KEY_PREFIX, token)
 }

@@ -13,9 +13,11 @@ use axum::{
     Json, Router,
 };
 use redis::{Client, RedisResult};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPoolOptions;
-use tower_http::{cors::CorsLayer, services::ServeDir};
+use sqlx::{database, postgres::PgPoolOptions};
+use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
+use tracing::info;
 
 use crate::{
     app_state::AppState,
@@ -24,6 +26,7 @@ use crate::{
         login_handler, logout_handler, signup_handler, verify_2fa_handler, verify_token_handler,
     },
     services::{BannedTokenStore, TwoFACodeStore, UserStore},
+    utils::tracing::{make_span_with_request_id, on_request, on_response},
 };
 
 pub struct Application {
@@ -63,7 +66,13 @@ impl Application {
             .route("/verify-2fa", post(verify_2fa_handler))
             .route("/verify-token", post(verify_token_handler))
             .with_state(app_state)
-            .layer(cors);
+            .layer(cors)
+            .layer(
+                TraceLayer::new_for_http()
+                    .make_span_with(make_span_with_request_id)
+                    .on_request(on_request)
+                    .on_response(on_response),
+            );
 
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
@@ -73,7 +82,7 @@ impl Application {
     }
 
     pub async fn run(self) -> Result<(), std::io::Error> {
-        println!("listening on {}", &self.address);
+        info!("listening on {}", &self.address);
         self.server.await
     }
 }
@@ -85,12 +94,13 @@ pub struct ErrorResponse {
 
 impl IntoResponse for AuthAPIError {
     fn into_response(self) -> Response {
+        log_error_chain(&self);
         let (status, error_message) = match self {
             AuthAPIError::UserAlreadyExists => (http::StatusCode::CONFLICT, "User already exists"),
             AuthAPIError::InvalidCredentials => {
                 (http::StatusCode::BAD_REQUEST, "Invalid credentials")
             }
-            AuthAPIError::UnexpectedError => {
+            AuthAPIError::UnexpectedError(_) => {
                 (http::StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
             }
             AuthAPIError::IncorrectCredentials => {
@@ -106,7 +116,23 @@ impl IntoResponse for AuthAPIError {
     }
 }
 
-pub async fn get_postgres_pool(database_url: &str) -> Result<sqlx::PgPool, sqlx::Error> {
+fn log_error_chain(e: &(dyn Error + 'static)) {
+    let separator =
+        "\n-----------------------------------------------------------------------------------\n";
+    let mut report = format!("{}{:?}\n", separator, e);
+    let mut current = e.source();
+    while let Some(cause) = current {
+        let str = format!("Caused by:\n\n{:?}", cause);
+        report = format!("{}\n{}", report, str);
+        current = cause.source();
+    }
+    report = format!("{}\n{}", report, separator);
+    tracing::error!("{}", report);
+}
+
+pub async fn get_postgres_pool(database_url: &SecretString) -> Result<sqlx::PgPool, sqlx::Error> {
+    let database_url = database_url.expose_secret();
+    tracing::info!("Connecting to Postgres...");
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(database_url)
