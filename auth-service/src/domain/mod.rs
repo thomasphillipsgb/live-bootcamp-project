@@ -54,12 +54,12 @@ pub mod models {
 
     impl Password {
         pub fn new(password: SecretString) -> Result<Self> {
-            let password = password.expose_secret();
-            if password.trim().is_empty() || password.len() < 8 {
+            let exposed_password = password.expose_secret();
+            if exposed_password.trim().is_empty() || exposed_password.len() < 8 {
                 return Err(eyre!("Invalid password"));
             }
             // Add password validation logic if needed
-            Ok(Self(SecretString::new(password.into())))
+            Ok(Self(password))
         }
     }
 

@@ -12,6 +12,16 @@ lazy_static! {
     pub static ref RESEND_SECRET: SecretString = set_resend_secret();
     pub static ref DATABASE_URL: SecretString = set_url();
     pub static ref REDIS_HOST_NAME: String = set_redis_host();
+    pub static ref SENDER_EMAIL: SecretString = set_sender_email();
+}
+
+fn set_sender_email() -> SecretString {
+    dotenv().ok(); // Load environment variables
+    let email = std_env::var(env::SENDER_EMAIL_ENV_VAR).expect("SENDER_EMAIL must be set.");
+    if email.is_empty() {
+        panic!("SENDER_EMAIL must not be empty.");
+    }
+    email.into()
 }
 
 fn set_resend_secret() -> SecretString {
@@ -51,6 +61,7 @@ pub mod env {
     pub const RESEND_SECRET_ENV_VAR: &str = "RESEND_API_KEY";
     pub const DATABASE_URL_ENV_VAR: &str = "DATABASE_URL";
     pub const REDIS_HOST_NAME_ENV_VAR: &str = "REDIS_HOST_NAME";
+    pub const SENDER_EMAIL_ENV_VAR: &str = "SENDER_EMAIL";
 }
 
 pub mod prod {

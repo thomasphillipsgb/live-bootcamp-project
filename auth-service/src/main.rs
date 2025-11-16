@@ -8,7 +8,7 @@ use auth_service::{
         redis_two_fa_code_store::RedisTwoFACodeStore,
     },
     utils::{
-        constants::{prod, DATABASE_URL, REDIS_HOST_NAME, RESEND_SECRET},
+        constants::{prod, DATABASE_URL, REDIS_HOST_NAME, RESEND_SECRET, SENDER_EMAIL},
         tracing::init_tracing,
     },
     Application,
@@ -48,7 +48,7 @@ async fn main() {
 
 fn configure_resend_client() -> ResendEmailClient {
     ResendEmailClient::new(
-        Email::new("me@tomphill.uk".into()).expect("Cannot make email"),
+        Email::new(SENDER_EMAIL.clone()).expect("Cannot make email"),
         &RESEND_SECRET,
     )
 }
