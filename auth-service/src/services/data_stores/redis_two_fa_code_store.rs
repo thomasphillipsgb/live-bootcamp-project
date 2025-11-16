@@ -92,6 +92,6 @@ fn get_key(email: &Email) -> String {
     format!(
         "{}{}",
         TWO_FA_CODE_PREFIX,
-        email.as_ref().expose_secret().to_owned()
+        email.as_ref().expose_secret()
     )
 }
