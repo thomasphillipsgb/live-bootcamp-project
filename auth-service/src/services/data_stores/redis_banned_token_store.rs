@@ -27,7 +27,7 @@ impl BannedTokenStore for RedisBannedTokenStore {
         let _: () = conn
             .set_ex(key, true, TOKEN_TTL_SECONDS)
             .await
-            .wrap_err("Failed to set bannded token store in Redis")
+            .wrap_err("Failed to set banned token store in Redis")
             .map_err(BannedTokenStoreError::UnexpectedError)?;
         Ok(())
     }
