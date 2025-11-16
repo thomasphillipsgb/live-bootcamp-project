@@ -54,7 +54,7 @@ fn generate_auth_token(email: &Email) -> Result<String> {
         exp
     ))?;
 
-    let sub = email.as_ref().to_owned().expose_secret().into();
+    let sub = email.as_ref().expose_secret().to_string();
 
     let claims = Claims { sub, exp };
 
